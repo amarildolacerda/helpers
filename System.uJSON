@@ -2,7 +2,7 @@ unit System.uJson;
 
 interface
 
-{$I Delphi.inc }
+{.$I Delphi.inc }
 
 {$IFDEF UNICODE}
 {$DEFINE XE}
