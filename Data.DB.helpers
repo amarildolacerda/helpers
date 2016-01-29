@@ -1,3 +1,12 @@
+{
+  Autor: Amarildo Lacerda
+  Data: 28/01/2016
+  Alteraçoes: 
+      28/01/16 - Primeira versão publicada
+      29/01/16 - correção DoLoopEvent;
+
+}
+
 unit Data.DB.Helper;
 
 interface
@@ -142,6 +151,7 @@ begin
   book := GetBookmark;
   try
     DisableControls;
+    first;
     while eof = false do
     begin
       AEvent(self);
