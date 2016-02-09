@@ -1,3 +1,8 @@
+{
+   Amarildo Lacerda  (09/02/2016)
+   Usando Record Helper
+
+}
 unit System.SysUtils.Helpers;
 
 interface
