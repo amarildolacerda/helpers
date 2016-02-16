@@ -3,11 +3,11 @@
    Usando Record Helper
 
 }
-unit System.SysUtils.Helpers;
+unit System.SysUtils.Helper;
 
 interface
 
-uses System.SysUtils;
+uses System.SysUtils, System.Types, System.DateUtils;
 
 
 type
@@ -33,10 +33,8 @@ type
 
 
 
+
 implementation
-
-
-uses System.DateUtils;
 
 
 
@@ -146,5 +144,6 @@ function TStringHelper.ToInteger: Integer;
 begin
    result := StrToInt(self);
 end;
+
 
 end.
