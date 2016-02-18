@@ -25,6 +25,11 @@
 
 unit System.Datetime.helper;
 
+{
+   Amarildo Lacerda
+   Incluido novos metodos;
+}
+
 interface
 
 uses
@@ -60,6 +65,7 @@ type
 
     property Date: TDateTime read GetDate;
     property Time: TDateTime read GetTime;
+
 
     property DayOfWeek: Word read GetDayOfWeek;
     property DayOfYear: Word read GetDayOfYear;
@@ -117,6 +123,11 @@ type
     function WithinMinutes(const aDateTime: TDateTime; const aMinutes: Int64): Boolean; inline;
     function WithinSeconds(const aDateTime: TDateTime; const aSeconds: Int64): Boolean; inline;
     function WithinMilliseconds(const aDateTime: TDateTime; const AMilliseconds: Int64): Boolean; inline;
+
+    function ToFloat:Double;
+    Function ToDate:TDate;
+    Function ToTime:TTime;
+
   end;
 
 implementation
@@ -355,12 +366,27 @@ begin
   Result := StartOfTheYear(Self);
 end;
 
+function TDateTimeHelper.ToDate: TDate;
+begin
+   result := GetDate;
+end;
+
+function TDateTimeHelper.ToFloat: Double;
+begin
+   result := self;
+end;
+
 function TDateTimeHelper.ToString(const aFormatStr: string): string;
 begin
   if aFormatStr = '' then
     Result := DateToStr(Self)
   else
     Result := FormatDateTime(aFormatStr, Self);
+end;
+
+function TDateTimeHelper.ToTime: TTime;
+begin
+   result := GetTime;
 end;
 
 function TDateTimeHelper.WeeksBetween(const aDateTime: TDateTime): Integer;

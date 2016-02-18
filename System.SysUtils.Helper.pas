@@ -1,8 +1,28 @@
-{
-   Amarildo Lacerda  (09/02/2016)
-   Usando Record Helper
+{***************************************************************************}
+{                                                                           }
+{           Records Helper                                                  }
+{                                                                           }
+{           Copyright (C) Amarildo Lacerda                                  }
+{                                                                           }
+{           https://github.com/amarildolacerda                              }
+{                                                                           }
+{                                                                           }
+{***************************************************************************}
+{                                                                           }
+{  Licensed under the Apache License, Version 2.0 (the "License");          }
+{  you may not use this file except in compliance with the License.         }
+{  You may obtain a copy of the License at                                  }
+{                                                                           }
+{      http://www.apache.org/licenses/LICENSE-2.0                           }
+{                                                                           }
+{  Unless required by applicable law or agreed to in writing, software      }
+{  distributed under the License is distributed on an "AS IS" BASIS,        }
+{  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. }
+{  See the License for the specific language governing permissions and      }
+{  limitations under the License.                                           }
+{                                                                           }
+{***************************************************************************}
 
-}
 unit System.SysUtils.Helper;
 
 interface
@@ -23,6 +43,8 @@ type
          function ToTime:TTime;
          function ToISOTime:String;
          procedure FromISOTime(ATime:String);
+         procedure FromString( AString:String;ADef:double);overload;
+         procedure FromString( AString:String);overload;
      end;
 
      TStringHelper = record helper for string
@@ -30,9 +52,9 @@ type
          function ToFloat:Double;
          function ToDateTime:TDatetime;
          function ToInteger:Integer;
+         procedure FromFloat( Value:Double );overload;
+         procedure FromFloat(AFormat:string;Value:Double);overload;
      end;
-
-
 
 
 implementation
@@ -99,6 +121,16 @@ begin
    self := ISOStrToTime(ATime);
 end;
 
+procedure TDoubleHelper.FromString(AString: String);
+begin
+   self := StrToFloat(AString);
+end;
+
+procedure TDoubleHelper.FromString(AString: String; ADef:double);
+begin
+   self := StrToFloatDef(AString,ADef);
+end;
+
 function TDoubleHelper.ToDateTime: TDateTime;
 begin
    result := self;
@@ -135,6 +167,16 @@ begin
 end;
 
 { TStringHelper }
+
+procedure TStringHelper.FromFloat(Value: Double);
+begin
+  self := FloatToStr(Value);
+end;
+
+procedure TStringHelper.FromFloat(AFormat: string; Value: Double);
+begin
+    self := FormatFloat(AFormat,Value)
+end;
 
 function TStringHelper.toDateTime: TDatetime;
 begin
