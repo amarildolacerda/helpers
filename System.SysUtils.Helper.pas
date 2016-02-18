@@ -14,7 +14,8 @@ type
      TDoubleHelper = record helper for double
      public
          function Add( n:double) : double;
-         function ToString:String;
+         function ToString:String;overload;
+         function ToString(AFormat:string):string;overload;
          function ToInteger:Integer;
          function ToDateTime:TDateTime;
          function ToISODatetime :string;
@@ -116,6 +117,11 @@ end;
 function TDoubleHelper.ToISOTime: String;
 begin
    result := ISOTimeToString( TTime(self) );
+end;
+
+function TDoubleHelper.ToString(AFormat: string): string;
+begin
+  result := System.SysUtils.FormatFloat(AFormat,self);
 end;
 
 function TDoubleHelper.ToString: String;

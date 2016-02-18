@@ -1,7 +1,7 @@
 {
   Autor: Amarildo Lacerda
   Data: 28/01/2016
-  Alteraçoes: 
+  Alteraçoes:
       28/01/16 - Primeira versão publicada
       29/01/16 - correção DoLoopEvent;
 
@@ -11,7 +11,7 @@ unit Data.DB.Helper;
 
 interface
 
-uses Classes, SysUtils, DB;
+uses Classes, SysUtils, DB, System.JSON;
 
 type
 
@@ -42,21 +42,53 @@ type
     procedure AppendRecords(ADataSet:TDataset);
     procedure FieldMask(fld:String;mask:string);
     procedure FieldTitle(AFld:string;ATitle:string);
+    function FieldChanged(fld: string): Boolean;
 
   end;
 
   TFieldsHelper = class helper for TFields
+  private
   public
-    function ToJson(): string;
+    function JsonObject(var AJSONObject:TJsonObject; ANulls:boolean=true):integer;
+    function ToJson(ANulls:boolean=true): string;
     procedure FormJson(AJson:string);
   end;
 
 
 implementation
 
-uses System.uJson, System.JSON, System.DateUtils,
-     SqlTimSt,   FmtBcd,
+uses System.uJson, System.DateUtils,
+     SqlTimSt,   FmtBcd,System.Variants,
      Soap.EncdDecd;
+
+
+function TDatasetHelper.FieldChanged(fld: string): Boolean;
+var
+  fd: TField;
+begin
+  result := false;
+  fd := FindField(fld);
+  if fd = nil then
+    exit;
+  try
+    if VarIsNull(fd.OldValue) and VarIsNull(fd.Value) then
+      exit;
+  except
+  end;
+  if not(State in [dsEdit, dsInsert]) then
+    exit;
+  try
+    if State in [dsEdit] then
+      if fd.OldValue = fd.Value then
+        exit;
+    if State in [dsInsert] then
+      if VarIsNull(fd.Value) then
+        exit;
+    result := true;
+  except
+  end;
+end;
+
 
 procedure TDatasetHelper.ChangeAllValuesTo(AFieldName: string; AValue: Variant);
 begin
@@ -327,23 +359,31 @@ end;
 function TDatasetHelper.ToJson: String;
 var
   book: TBookMark;
-  lst: TStringList;
+  //lst: TStringList; //
+  LJson:TJSONArray;
+  LRow:TJsonObject;
 begin
   result := '[]';
   book := GetBookmark;
   try
-    lst := TStringList.Create;
+    //lst := TStringList.Create;
+    LJson:=TJsonArray.create;
     try
-      lst.Delimiter := ',';
+      //lst.Delimiter := ',';
       DisableControls;
       while eof = false do
       begin
-        lst.Add(Fields.ToJson());
+        LRow:=TJsonObject.create;
+        Fields.JsonObject(LRow,false);
+        //lst.Add(Fields.ToJson(false));
+        LJson.AddElement( LRow  );
         next;
       end;
-      result := '[' + lst.DelimitedText + ']';
+      //result := '[' + lst.DelimitedText + ']';
+      result := LJson.ToJSON;
     finally
-      lst.Free;
+      //lst.Free;
+      LJson.Free;
     end;
   finally
     EnableControls;
@@ -461,24 +501,38 @@ begin
     end;
 end;
 
-function TFieldsHelper.ToJson: string;
+
+function TFieldsHelper.ToJson(ANulls:boolean=true): string;
+var AJsonObject:TJSONObject;
+begin
+    AJsonObject := TJSONObject.Create;
+    try
+      JSONObject(AJsonObject,ANulls);
+      result := AJsonObject.ToString;
+    finally
+      AJsonObject.Free;
+    end;
+end;
+
+function TFieldsHelper.JsonObject(var AJSONObject:TJsonObject; ANulls:boolean=true):integer;
 var
   I: Integer;
   key: string;
   ts: TSQLTimeStamp;
   MS: TMemoryStream;
   SS: TStringStream;
-  AJSONObject:TJsonObject;
   it:TField;
 begin
-  result := '';
-  AJSONObject := TJSONObject.Create;
-  try
+  result := 0;
+  if not assigned(AJSONObject) then
+     raise exception.Create('Error Message, not init JSONOject ');
+
   for it in self do
   begin
     key := LowerCase(it.FieldName);
     if it.IsNull then
     begin
+      if not ANulls then continue;
       AJSONObject.AddPair(key, TJSONNull.Create);
       Continue;
     end;
@@ -527,16 +581,13 @@ begin
               MS.Free;
             end;
         end;
-     end;
 
-      // else
-      // raise EMapperException.Create('Cannot find type for field ' + key);
-  end;
-   result := AJSONObject.toJson;
-  finally
-    freeAndNil(AJSONObject);
+     end;
+     inc(result);
   end;
 end;
+
+
 
 
 
