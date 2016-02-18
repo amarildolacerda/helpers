@@ -1,9 +1,9 @@
 {
   Autor: Amarildo Lacerda
   Data: 28/01/2016
-  Altera√ßoes: 
-      28/01/16 - Primeira vers√£o publicada
-      29/01/16 - corre√ß√£o DoLoopEvent;
+  AlteraÁoes: 
+      28/01/16 - Primeira vers„o publicada
+      29/01/16 - correÁ„o DoLoopEvent;
 
 }
 
@@ -94,13 +94,25 @@ begin
 end;
 
 procedure TDatasetHelper.AppendRecords(ADataSet: TDataset);
+var
+  book: TBookMark;
 begin
+  book := GetBookmark;
+  try
+    DisableControls;
+    ADataset.first;
     while ADataset.Eof=false do
     begin
         append;
         CopyFields(ADataset);
         Post;
+        ADataset.next;
     end;
+  finally
+     GotoBookmark(book);
+     FreeBookmark(book);
+     EnableControls;
+  end;
 end;
 
 procedure TDatasetHelper.ChangeAllValuesTo(AFieldName: string; AValue: Variant;
@@ -248,7 +260,8 @@ procedure TDatasetHelper.Run(AProc: TProc<TDataset>);
 begin
    TThread.CreateAnonymousThread(
      procedure begin
-        AProc(self);
+       if assigned(AProc) then
+          AProc(self);
      end
    ).Start;
 end;
@@ -264,7 +277,7 @@ begin
   o := TJSON.Parse(sJson);
 
   if o.Contains('result') = false then
-    raise exception.Create('N√£o possui tag "result" no json');
+    raise exception.Create('N„o possui tag "result" no json');
 
   o.TryGetValue<TJSONArray>('result', A);
 
