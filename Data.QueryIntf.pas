@@ -37,7 +37,7 @@ uses
   System.Rtti, FireDAC.Stan.Param,
   FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Def,
   FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.Stan.ExprFuncs,
-  FireDAC.Phys.SQLiteDef, FireDAC.Comp.UI,
+  {FireDAC.Phys.SQLiteDef,} FireDAC.Comp.UI,
   FireDAC.Phys.SQLite, Data.DB, FireDAC.Comp.Client;
 
 type
@@ -60,7 +60,7 @@ type
   IDataset = interface
     ['{AED88905-4241-4BBD-9035-1112C882CF05}']
     function Open: IQuery;
-    procedure Close;
+    function Close:IQuery;
     procedure Next;
     procedure Prior;
     procedure Last;
@@ -85,6 +85,7 @@ type
 
   end;
 
+
   IQuery = Interface(IDataset)
     ['{4C9E016E-41A2-42D1-899E-D820FE4FA9C4}']
     function ExecSql(const AScript: string):IQuery;
@@ -97,6 +98,7 @@ type
       write SetConnectionIntf;
     function GetParams: TFDParams;
     property Params: TFDParams read GetParams;
+
 
     // Enumerator
     function GetEnumerator: IQuery;
@@ -112,6 +114,7 @@ type
     function Clone:IQuery;
 
     // Filters
+    function ConnectName(texto:String):IQuery;
     function Where(const texto:string):IQuery;
     function Table(const texto:string):IQuery;
     function Join(const texto:string):IQuery;
@@ -121,6 +124,7 @@ type
     function FilterResult( const texto:string):IQuery;
     function FieldNames(const texto:string):IQuery;
     function paramValue(const nome:string; valor:variant):IQuery;
+    function fieldValue(const nome:string; valor:variant):IQuery;
 
     function GetCmdFields: string;
     function GetCmdJoin: string;
@@ -140,6 +144,26 @@ type
 
 
   End;
+
+  IDatabase = interface
+    ['{09A79486-12B6-4944-9F4C-8CF841D901E5}']
+    function Open:IDatabase;
+    function ParamValue(sParam:string;value:variant):IDatabase;
+    function Driver(ADriver:string):IDatabase;
+    function ConnectName(ADBname:string):IDatabase;
+    function LoginParam(AUser:string;APass:String):IDatabase;
+  end;
+
+  TDatabaseIntf = class(TFDCustomConnection,IDatabase)
+    public
+      class function new:IDatabase;
+      function Open:IDatabase;overload;
+      function Close:IDatabase;overload;
+      function ParamValue(sParam:string;value:variant):IDatabase;
+      function Driver(ADriver:string):IDatabase;
+      function ConnectName(ADBname:string):IDatabase;
+      function LoginParam(AUser:string;APass:String):IDatabase;
+  end;
 
   TQueryIntf = class(TFDQuery, IQuery, IDataset)
   private
@@ -165,6 +189,8 @@ type
   public
     class function New:IQuery;overload;
     class function New(const AConnection: TFDCustomConnection): IQuery;overload;
+    function Close:IQuery;
+    function ConnectName(texto:String):IQuery;virtual;
 
     function RowsAffected: integer;
     function eof: boolean;
@@ -180,8 +206,8 @@ type
     function StartTransaction:IQuery;
     function Commit:IQuery;
     function Rollback:IQuery;
-    function Open: IQuery;overload;
-    function Open(const AProc:TProc<TFDParams> ): IQuery;overload;
+    function Open: IQuery;overload;virtual;
+    function Open(const AProc:TProc<TFDParams> ): IQuery;overload;virtual;
     procedure InternalFirst;override;
     procedure InternalDelete; override;
     procedure InternalLast; override;
@@ -194,6 +220,7 @@ type
     function GetEnumerator:IQuery;
     function GetParams: TFDParams;
     function paramValue(const nome:string; valor:variant):IQuery;
+    function fieldValue(const nome:string; valor:variant):IQuery;
     function NewQuery(const ATable: string=''; const AFields: String = '*';
       const AWhere: String = ''; const AOrderBy: string = '';
       const AJoin: String = ''): IQuery;
@@ -201,13 +228,13 @@ type
     destructor Destroy;override;
     function Clone:IQuery;
     function RebuildSql:IQuery;
-    function Where(const texto:string):IQuery;
-    function Table(const texto:string):IQuery;
-    function FieldNames(const texto:string):IQuery;
-    function Join(const texto:string):IQuery;
-    function OrderBy( const Texto:string):IQuery;
-    function AndWhere( const texto:string):IQuery;
-    function OrWhere( const texto:string):IQuery;
+    function Where(const texto:string):IQuery;virtual;
+    function Table(const texto:string):IQuery;virtual;
+    function FieldNames(const texto:string):IQuery;virtual;
+    function Join(const texto:string):IQuery;virtual;
+    function OrderBy( const Texto:string):IQuery;virtual;
+    function AndWhere( const texto:string):IQuery;virtual;
+    function OrWhere( const texto:string):IQuery;virtual;
     function FilterResult( const texto:string):IQuery;
     function RecordCountInt:integer;
 
@@ -251,10 +278,22 @@ begin
    result.Connection := self.GetConnectionIntf;
 end;
 
+function TQueryIntf.Close: IQuery;
+begin
+   result := self;
+   inherited close;
+end;
+
 function TQueryIntf.Commit:IQuery;
 begin
   result := self;
   Connection.Commit;
+end;
+
+function TQueryIntf.ConnectName(texto: String): IQuery;
+begin
+  result := self;
+  ConnectionName := texto;
 end;
 
 constructor TQueryIntf.create(AOwner: TComponent);
@@ -325,12 +364,22 @@ begin
    RebuildSql;
 end;
 
+function TQueryIntf.fieldValue(const nome: string; valor: variant): IQuery;
+var fld:TField;
+begin
+   result := self;
+   fld := FindField(nome);
+   if fld<>nil then
+      fld.Value := valor;
+end;
+
 function TQueryIntf.FilterResult(const texto: string):IQuery;
 begin
   result := self;
   inherited Filter:= texto;
   inherited Filtered := texto<>'';
 end;
+
 
 procedure TQueryIntf.InternalDelete;
 begin
@@ -482,9 +531,12 @@ begin
 end;
 
 function TQueryIntf.paramValue(const nome: string; valor: variant): IQuery;
+var prm:TFDParam;
 begin
    result := self;
-   ParamByName(nome).Value := valor;
+   prm := FindParam(nome);
+   if prm<>nil then
+     prm.Value := valor;
 end;
 
 function TQueryIntf.RebuildSql:IQuery;
@@ -591,7 +643,7 @@ end;
 
 class function TDataStorageRec.NewQuery: IQuery;
 begin
-  result := TQueryIntf.Create(nil);
+  result := TQueryIntf.Create(nil) as IQuery;
 end;
 
 
@@ -633,6 +685,52 @@ begin
   finally
     sql.Free;
   end;
+end;
+
+{ TDatabaseIntf }
+
+
+function TDatabaseIntf.Close: IDatabase;
+begin
+   result := self;
+   inherited Close;
+end;
+
+function TDatabaseIntf.ConnectName(ADBname: string): IDatabase;
+begin
+   result := self;
+   inherited ConnectionName:=ADBname;
+end;
+
+function TDatabaseIntf.Driver(ADriver: string): IDatabase;
+begin
+    result := self;
+    inherited driverName := ADriver;
+end;
+
+function TDatabaseIntf.LoginParam(AUser, APass: String): IDatabase;
+begin
+   result := self
+   .ParamValue('USER_NAME',AUser)
+   .ParamValue('Password',APass);
+end;
+
+class function TDatabaseIntf.new: IDatabase;
+begin
+
+    result := TDatabaseIntf.Create(nil) as IDatabase;
+end;
+
+function TDatabaseIntf.Open: IDatabase;
+begin
+    result := self;
+    inherited Open;
+end;
+
+function TDatabaseIntf.ParamValue(sParam: string; value: variant): IDatabase;
+begin
+    result := self;
+    Params.Values[sParam] := value;
 end;
 
 end.
