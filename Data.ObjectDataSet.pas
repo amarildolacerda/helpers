@@ -71,10 +71,6 @@ type
     procedure SetObjectClass(const Value: TClass);
     procedure SetStringMax(const Value: integer);
     procedure InternalSetToRecord(Buffer: TRecBuf); overload; override;
-    procedure FieldToObject(LRow: integer);overload;
-    procedure FieldToObject(Obj:TObject);overload;
-    procedure ObjectToField(LRow: integer);overload;
-    procedure ObjectToField(Obj:TObject);overload;
 
     procedure SetOwnsObjects(const Value: Boolean);
     function GetOwnsObjects: Boolean;
@@ -85,6 +81,10 @@ type
     constructor create(AOwner: TComponent); overload; override;
     constructor create(AOwnder: TComponent; AClass: TClass); overload;
     destructor destroy; override;
+    procedure FieldToObject(LRow: integer);overload;
+    procedure FieldToObject(Obj:TObject);overload;
+    procedure ObjectToField(LRow: integer);overload;
+    procedure ObjectToField(Obj:TObject);overload;
     procedure DisableListControls;
     procedure EnableListControls;
     procedure Reopen;
