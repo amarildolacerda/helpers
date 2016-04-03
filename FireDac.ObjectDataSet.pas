@@ -26,7 +26,7 @@ unit FireDac.ObjectDataSet;
 
 interface
 
-uses System.Classes, System.Rtti, Data.DB, mInterfaces,
+uses System.Classes, System.Rtti, Data.DB,
   FireDAC.Stan.Intf, FireDAC.Stan.Option,
   FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
   FireDAC.DApt.Intf, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
@@ -34,8 +34,21 @@ uses System.Classes, System.Rtti, Data.DB, mInterfaces,
 
 type
 
-  TObjectDataSet = class(TFDMemTable)
 
+
+  TObjectListEvent = procedure(sender:TObject; Action: TListNotification) of object;
+
+  TObjectListEventing = class(TObjectList)
+  private
+    FOnAddEvent: TObjectListEvent;
+    procedure SetOnAddEvent(const Value: TObjectListEvent);
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+     public
+        property OnNotifyEvent:TObjectListEvent read FOnAddEvent write SetOnAddEvent;
+  end;
+
+
+  TObjectDataSet = class(TFDMemTable)
   private
 
     FNotifyControls: integer;
@@ -354,5 +367,21 @@ begin
   if FNotifyControls < 0 then
     FNotifyControls := 0;
 end;
+
+
+{ TObjectListEventing }
+
+procedure TObjectListEventing.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  inherited;
+  if assigned(FOnAddEvent) then
+     FOnAddEvent(self,Action);
+end;
+
+procedure TObjectListEventing.SetOnAddEvent(const Value: TObjectListEvent);
+begin
+  FOnAddEvent := Value;
+end;
+
 
 end.

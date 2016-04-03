@@ -27,19 +27,32 @@ unit Data.JvObjectDataSet;
 
 interface
 
-uses System.Classes, JvMemoryDataSet, System.Rtti, Data.DB, mInterfaces,
+uses System.Classes, JvMemoryDataSet, System.Rtti, Data.DB,
   System.SysUtils, System.Generics.Collections, System.Contnrs;
 
 type
 
-  TObjectDataSet = class(TJvMemoryData)
+
+  TJvObjectListEvent = procedure(sender:TObject; Action: TListNotification) of object;
+
+  TJvObjectListEventing = class(TObjectList)
+  private
+    FOnAddEvent: TJvObjectListEvent;
+    procedure SetOnAddEvent(const Value: TJvObjectListEvent);
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+     public
+        property OnNotifyEvent:TJvObjectListEvent read FOnAddEvent write SetOnAddEvent;
+  end;
+
+
+  TJvObjectDataSet = class(TJvMemoryData)
 
   private
 
     FNotifyControls: integer;
     FObjectClass: TClass;
     FStringMax: integer;
-    FObjectList: TObjectListEventing;
+    FObjectList: TJvObjectListEventing;
     FObjectListOwned: Boolean;
     FObjectClassName: string;
     procedure InternalInitFieldDefsObjectClass;
@@ -63,7 +76,7 @@ type
     procedure SetOwnsObjects(const Value: Boolean);
     function GetOwnsObjects: Boolean;
     procedure SetObjectClassName(const Value: string);
-    procedure SetObjectList(const Value: TObjectListEventing);
+    procedure SetObjectList(const Value: TJvObjectListEventing);
 
   public
     constructor create(AOwner: TComponent); overload; override;
@@ -74,7 +87,7 @@ type
     procedure Reopen;
   published
     property ObjectClass: TClass read FObjectClass write SetObjectClass;
-    property ObjectList: TObjectListEventing read FObjectList
+    property ObjectList: TJvObjectListEventing read FObjectList
       write SetObjectList;
     property OwnsObjects: Boolean read GetOwnsObjects write SetOwnsObjects;
     property ObjectClassName: string read FObjectClassName
@@ -83,24 +96,27 @@ type
 
   end;
 
+
+  TObjectDataSet = TJvObjectDataSet;
+
 implementation
 
-constructor TObjectDataSet.create(AOwner: TComponent);
+constructor TJvObjectDataSet.create(AOwner: TComponent);
 begin
   inherited;
   FStringMax := 255;
-  FObjectList := TObjectListEventing.create;
+  FObjectList := TJvObjectListEventing.create;
   FObjectListOwned := true;
   FObjectList.OnNotifyEvent := DoAddToObjectListEvent;
 end;
 
-constructor TObjectDataSet.create(AOwnder: TComponent; AClass: TClass);
+constructor TJvObjectDataSet.create(AOwnder: TComponent; AClass: TClass);
 begin
   create(AOwnder);
   ObjectClass := AClass;
 end;
 
-destructor TObjectDataSet.destroy;
+destructor TJvObjectDataSet.destroy;
 begin
   FObjectList.OnNotifyEvent := nil;
   if FObjectListOwned then
@@ -108,7 +124,7 @@ begin
   inherited;
 end;
 
-procedure TObjectDataSet.DoAfterEdit;
+procedure TJvObjectDataSet.DoAfterEdit;
 var
   LRow: integer;
 begin
@@ -119,7 +135,7 @@ begin
 
 end;
 
-procedure TObjectDataSet.DoAddToObjectListEvent(Sender: TObject;
+procedure TJvObjectDataSet.DoAddToObjectListEvent(Sender: TObject;
   action: TListNotification);
 var
   LRow: integer;
@@ -141,7 +157,7 @@ begin
 
 end;
 
-procedure TObjectDataSet.FieldToObject(LRow: integer);
+procedure TJvObjectDataSet.FieldToObject(LRow: integer);
 var
   LContext: TRttiContext;
   obj: TObject;
@@ -168,18 +184,18 @@ begin
   end;
 end;
 
-function TObjectDataSet.GetOwnsObjects: Boolean;
+function TJvObjectDataSet.GetOwnsObjects: Boolean;
 begin
   result := FObjectList.OwnsObjects;
 end;
 
-procedure TObjectDataSet.InternalAddRecord(Buffer: TJvRecordBuffer;
+procedure TJvObjectDataSet.InternalAddRecord(Buffer: TJvRecordBuffer;
   Append: Boolean);
 begin
   inherited;
 end;
 
-procedure TObjectDataSet.InternalDelete;
+procedure TJvObjectDataSet.InternalDelete;
 var
   LRow: integer;
 begin
@@ -191,12 +207,12 @@ begin
 
 end;
 
-procedure TObjectDataSet.InternalEdit;
+procedure TJvObjectDataSet.InternalEdit;
 begin
   inherited;
 end;
 
-procedure TObjectDataSet.InternalInitFieldDefsObjectClass;
+procedure TJvObjectDataSet.InternalInitFieldDefsObjectClass;
 var
   LContext: TRttiContext;
   LRttiType: TRttiType;
@@ -243,7 +259,7 @@ begin
 
 end;
 
-procedure TObjectDataSet.InternalInsert;
+procedure TJvObjectDataSet.InternalInsert;
 var
   LRow: integer;
 begin
@@ -262,7 +278,7 @@ begin
   end;
 end;
 
-procedure TObjectDataSet.InternalPost;
+procedure TJvObjectDataSet.InternalPost;
 var
   LRow: integer;
 begin
@@ -274,12 +290,12 @@ begin
   end;
 end;
 
-procedure TObjectDataSet.InternalSetToRecord(Buffer: TRecBuf);
+procedure TJvObjectDataSet.InternalSetToRecord(Buffer: TRecBuf);
 begin
   inherited InternalSetToRecord(Buffer);
 end;
 
-procedure TObjectDataSet.ObjectToField(LRow: integer);
+procedure TJvObjectDataSet.ObjectToField(LRow: integer);
 var
   LNome: string;
   obj: TObject;
@@ -310,31 +326,31 @@ begin
   end;
 end;
 
-procedure TObjectDataSet.Reopen;
+procedure TJvObjectDataSet.Reopen;
 begin
   close;
   open;
 end;
 
-procedure TObjectDataSet.SetFieldData(Field: TField; Buffer: TValueBuffer;
+procedure TJvObjectDataSet.SetFieldData(Field: TField; Buffer: TValueBuffer;
   NativeFormat: Boolean);
 begin
   inherited;
 end;
 
-procedure TObjectDataSet.SetObjectClass(const Value: TClass);
+procedure TJvObjectDataSet.SetObjectClass(const Value: TClass);
 begin
   FObjectClass := Value;
   InternalInitFieldDefsObjectClass;
 end;
 
-procedure TObjectDataSet.SetObjectClassName(const Value: string);
+procedure TJvObjectDataSet.SetObjectClassName(const Value: string);
 begin
   FObjectClassName := Value;
   ObjectClass := FindClass(Value);
 end;
 
-procedure TObjectDataSet.SetObjectList(const Value: TObjectListEventing);
+procedure TJvObjectDataSet.SetObjectList(const Value: TJvObjectListEventing);
 begin
   FObjectList.OnNotifyEvent := nil;
   FreeAndNil(FObjectList);
@@ -343,28 +359,44 @@ begin
   FObjectListOwned := false;
 end;
 
-procedure TObjectDataSet.SetOwnsObjects(const Value: Boolean);
+procedure TJvObjectDataSet.SetOwnsObjects(const Value: Boolean);
 begin
   FObjectList.OwnsObjects := Value;
 end;
 
-procedure TObjectDataSet.SetStringMax(const Value: integer);
+procedure TJvObjectDataSet.SetStringMax(const Value: integer);
 begin
   FStringMax := Value;
 end;
 
 { TObjectListChangeEvent }
 
-procedure TObjectDataSet.DisableListControls;
+procedure TJvObjectDataSet.DisableListControls;
 begin
   inc(FNotifyControls);
 end;
 
-procedure TObjectDataSet.EnableListControls;
+procedure TJvObjectDataSet.EnableListControls;
 begin
   dec(FNotifyControls);
   if FNotifyControls < 0 then
     FNotifyControls := 0;
 end;
+
+
+{ TObjectListEventing }
+
+procedure TJvObjectListEventing.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  inherited;
+  if assigned(FOnAddEvent) then
+     FOnAddEvent(self,Action);
+end;
+
+procedure TJvObjectListEventing.SetOnAddEvent(const Value: TJvObjectListEvent);
+begin
+  FOnAddEvent := Value;
+end;
+
 
 end.
