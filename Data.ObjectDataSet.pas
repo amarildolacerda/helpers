@@ -1,29 +1,28 @@
-{***************************************************************************}
-{                                                                           }
-{                                                                           }
-{           Copyright (C) Amarildo Lacerda                                  }
-{                                                                           }
-{           https://github.com/amarildolacerda                              }
-{                                                                           }
-{                                                                           }
-{***************************************************************************}
-{                                                                           }
-{  Licensed under the Apache License, Version 2.0 (the "License");          }
-{  you may not use this file except in compliance with the License.         }
-{  You may obtain a copy of the License at                                  }
-{                                                                           }
-{      http://www.apache.org/licenses/LICENSE-2.0                           }
-{                                                                           }
-{  Unless required by applicable law or agreed to in writing, software      }
-{  distributed under the License is distributed on an "AS IS" BASIS,        }
-{  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. }
-{  See the License for the specific language governing permissions and      }
-{  limitations under the License.                                           }
-{                                                                           }
-{***************************************************************************}
+{ *************************************************************************** }
+{ }
+{ }
+{ Copyright (C) Amarildo Lacerda }
+{ }
+{ https://github.com/amarildolacerda }
+{ }
+{ }
+{ *************************************************************************** }
+{ }
+{ Licensed under the Apache License, Version 2.0 (the "License"); }
+{ you may not use this file except in compliance with the License. }
+{ You may obtain a copy of the License at }
+{ }
+{ http://www.apache.org/licenses/LICENSE-2.0 }
+{ }
+{ Unless required by applicable law or agreed to in writing, software }
+{ distributed under the License is distributed on an "AS IS" BASIS, }
+{ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. }
+{ See the License for the specific language governing permissions and }
+{ limitations under the License. }
+{ }
+{ *************************************************************************** }
 
-
-unit Data.JvObjectDataSet;
+unit Data.ObjectDataSet;
 
 interface
 
@@ -32,18 +31,18 @@ uses System.Classes, JvMemoryDataSet, System.Rtti, Data.DB,
 
 type
 
-
-  TJvObjectListEvent = procedure(sender:TObject; Action: TListNotification) of object;
+  TJvObjectListEvent = procedure(sender: TObject; Action: TListNotification)
+    of object;
 
   TJvObjectListEventing = class(TObjectList)
   private
     FOnAddEvent: TJvObjectListEvent;
     procedure SetOnAddEvent(const Value: TJvObjectListEvent);
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
-     public
-        property OnNotifyEvent:TJvObjectListEvent read FOnAddEvent write SetOnAddEvent;
+  public
+    property OnNotifyEvent: TJvObjectListEvent read FOnAddEvent
+      write SetOnAddEvent;
   end;
-
 
   TJvObjectDataSet = class(TJvMemoryData)
 
@@ -63,8 +62,8 @@ type
     procedure InternalPost; override;
     procedure InternalEdit; override;
     procedure DoAfterEdit; override;
-    procedure DoAddToObjectListEvent(Sender: TObject;
-      action: TListNotification);
+    procedure DoAddToObjectListEvent(sender: TObject;
+      Action: TListNotification);
 
     procedure SetObjectClass(const Value: TClass);
     procedure SetStringMax(const Value: integer);
@@ -95,7 +94,6 @@ type
     property StringWidth: integer read FStringMax write SetStringMax;
 
   end;
-
 
   TObjectDataSet = TJvObjectDataSet;
 
@@ -135,24 +133,32 @@ begin
 
 end;
 
-procedure TJvObjectDataSet.DoAddToObjectListEvent(Sender: TObject;
-  action: TListNotification);
+procedure TJvObjectDataSet.DoAddToObjectListEvent(sender: TObject;
+  Action: TListNotification);
 var
   LRow: integer;
 begin
   if (FNotifyControls > 0) then
     exit;
 
-  if state in dsEditModes then
-    post;
-  DisableListControls;
-  try
-    insert;
-    LRow := GetRecNo - 1;
-    if (LRow >= 0) and (LRow < FObjectList.Count) then
-      FieldToObject(LRow);
-  finally
-    EnableListControls;
+  case Action of
+    lnAdded:
+      begin
+        if state in dsEditModes then
+          post;
+        DisableListControls;
+        try
+          insert;
+          if (LRow >= 0) and (LRow < FObjectList.Count) then
+            FieldToObject(LRow);
+        finally
+          EnableListControls;
+        end;
+      end;
+    lnExtracted:
+      ;
+    lnDeleted:
+      ;
   end;
 
 end;
@@ -383,20 +389,18 @@ begin
     FNotifyControls := 0;
 end;
 
-
 { TObjectListEventing }
 
 procedure TJvObjectListEventing.Notify(Ptr: Pointer; Action: TListNotification);
 begin
   inherited;
   if assigned(FOnAddEvent) then
-     FOnAddEvent(self,Action);
+    FOnAddEvent(self, Action);
 end;
 
 procedure TJvObjectListEventing.SetOnAddEvent(const Value: TJvObjectListEvent);
 begin
   FOnAddEvent := Value;
 end;
-
 
 end.

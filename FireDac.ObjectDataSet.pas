@@ -1,52 +1,51 @@
-{***************************************************************************}
-{                                                                           }
-{                                                                           }
-{           Copyright (C) Amarildo Lacerda                                  }
-{                                                                           }
-{           https://github.com/amarildolacerda                              }
-{                                                                           }
-{                                                                           }
-{***************************************************************************}
-{                                                                           }
-{  Licensed under the Apache License, Version 2.0 (the "License");          }
-{  you may not use this file except in compliance with the License.         }
-{  You may obtain a copy of the License at                                  }
-{                                                                           }
-{      http://www.apache.org/licenses/LICENSE-2.0                           }
-{                                                                           }
-{  Unless required by applicable law or agreed to in writing, software      }
-{  distributed under the License is distributed on an "AS IS" BASIS,        }
-{  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. }
-{  See the License for the specific language governing permissions and      }
-{  limitations under the License.                                           }
-{                                                                           }
-{***************************************************************************}
-
+{ *************************************************************************** }
+{ }
+{ }
+{ Copyright (C) Amarildo Lacerda }
+{ }
+{ https://github.com/amarildolacerda }
+{ }
+{ }
+{ *************************************************************************** }
+{ }
+{ Licensed under the Apache License, Version 2.0 (the "License"); }
+{ you may not use this file except in compliance with the License. }
+{ You may obtain a copy of the License at }
+{ }
+{ http://www.apache.org/licenses/LICENSE-2.0 }
+{ }
+{ Unless required by applicable law or agreed to in writing, software }
+{ distributed under the License is distributed on an "AS IS" BASIS, }
+{ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. }
+{ See the License for the specific language governing permissions and }
+{ limitations under the License. }
+{ }
+{ *************************************************************************** }
+
 unit FireDac.ObjectDataSet;
 
 interface
 
 uses System.Classes, System.Rtti, Data.DB,
-  FireDAC.Stan.Intf, FireDAC.Stan.Option,
-  FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
-  FireDAC.DApt.Intf, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  FireDac.Stan.Intf, FireDac.Stan.Option,
+  FireDac.Stan.Param, FireDac.Stan.Error, FireDac.DatS, FireDac.Phys.Intf,
+  FireDac.DApt.Intf, FireDac.Comp.DataSet, FireDac.Comp.Client,
   System.SysUtils, System.Generics.Collections, System.Contnrs;
 
 type
 
-
-
-  TObjectListEvent = procedure(sender:TObject; Action: TListNotification) of object;
+  TObjectListEvent = procedure(sender: TObject; Action: TListNotification)
+    of object;
 
   TObjectListEventing = class(TObjectList)
   private
     FOnAddEvent: TObjectListEvent;
     procedure SetOnAddEvent(const Value: TObjectListEvent);
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
-     public
-        property OnNotifyEvent:TObjectListEvent read FOnAddEvent write SetOnAddEvent;
+  public
+    property OnNotifyEvent: TObjectListEvent read FOnAddEvent
+      write SetOnAddEvent;
   end;
-
 
   TObjectDataSet = class(TFDMemTable)
   private
@@ -63,8 +62,8 @@ type
     procedure InternalPost; override;
     procedure InternalEdit; override;
     procedure DoAfterEdit; override;
-    procedure DoAddToObjectListEvent(Sender: TObject;
-      action: TListNotification);
+    procedure DoAddToObjectListEvent(sender: TObject;
+      Action: TListNotification);
 
     procedure SetObjectClass(const Value: TClass);
     procedure SetStringMax(const Value: integer);
@@ -130,24 +129,33 @@ begin
 
 end;
 
-procedure TObjectDataSet.DoAddToObjectListEvent(Sender: TObject;
-  action: TListNotification);
+procedure TObjectDataSet.DoAddToObjectListEvent(sender: TObject;
+  Action: TListNotification);
 var
   LRow: integer;
 begin
   if (FNotifyControls > 0) then
     exit;
 
-  if state in dsEditModes then
-    post;
-  DisableListControls;
-  try
-    insert;
-    LRow := GetRecNo - 1;
-    if (LRow >= 0) and (LRow < FObjectList.Count) then
-      FieldToObject(LRow);
-  finally
-    EnableListControls;
+  case Action of
+    lnAdded:
+      begin
+        if state in dsEditModes then
+          post;
+        DisableListControls;
+        try
+          insert;
+          LRow := GetRecNo - 1;
+          if (LRow >= 0) and (LRow < FObjectList.Count) then
+            FieldToObject(LRow);
+        finally
+          EnableListControls;
+        end;
+      end;
+    lnExtracted:
+      ;
+    lnDeleted:
+      ;
   end;
 
 end;
@@ -183,7 +191,6 @@ function TObjectDataSet.GetOwnsObjects: Boolean;
 begin
   result := FObjectList.OwnsObjects;
 end;
-
 
 procedure TObjectDataSet.InternalDelete;
 var
@@ -322,7 +329,6 @@ begin
   open;
 end;
 
-
 procedure TObjectDataSet.SetObjectClass(const Value: TClass);
 begin
   FObjectClass := Value;
@@ -368,20 +374,18 @@ begin
     FNotifyControls := 0;
 end;
 
-
 { TObjectListEventing }
 
 procedure TObjectListEventing.Notify(Ptr: Pointer; Action: TListNotification);
 begin
   inherited;
   if assigned(FOnAddEvent) then
-     FOnAddEvent(self,Action);
+    FOnAddEvent(self, Action);
 end;
 
 procedure TObjectListEventing.SetOnAddEvent(const Value: TObjectListEvent);
 begin
   FOnAddEvent := Value;
 end;
-
 
 end.
