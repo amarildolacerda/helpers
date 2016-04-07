@@ -28,7 +28,7 @@ interface
 
 uses System.Sysutils, System.Classes, System.JSON, IPPeerClient,
   REST.Client, REST.Authenticator.OAuth, REST.Response.Adapter,
-  REST.types, idHTTP, IdSSL, IdSSLOpenSSL,
+  REST.types, idHTTP, IdSSL, IdSSLOpenSSL, REST.Social, REST.FDSocial,
   System.Generics.Collections, FireDAC.Stan.Intf,
   FireDAC.Stan.Option, FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS,
   FireDAC.Phys.Intf, FireDAC.DApt.Intf, Data.DB, FireDAC.Comp.DataSet,
@@ -36,73 +36,13 @@ uses System.Sysutils, System.Classes, System.JSON, IPPeerClient,
 
 type
 
-  TDropboxBase = class
-  public
-    procedure LoadFromJson(js: TJsonObject); virtual;
-    procedure FromJson(aJson: string); virtual;
-    procedure LoadFromJsonFile(sFile: string); virtual;
-  end;
 
   TDropboxAppInfo = record
   public
   end;
 
-  TDropboxAuthBase = class(TDropboxBase)
-  private
-    FAccessToken: string;
-    FClient_Secret: string;
-    FClient_ID: string;
-    procedure SetAccessToken(const Value: string);
-    procedure SetClient_ID(const Value: string);
-    procedure SetClient_Secret(const Value: string);
-  public
-    property AccessToken: string read FAccessToken write SetAccessToken;
-    property Client_ID: string read FClient_ID write SetClient_ID;
-    property Client_Secret: string read FClient_Secret
-      write SetClient_Secret;
-    procedure LoadFromJson(js: TJsonObject); override;
-  end;
 
-  TRESTClientDropBox = class(TRESTClient)
-  private
-    FAuth2: TOAuth2Authenticator;
-    RESTResponse1: TRESTResponse;
-    RESTRequest1: TRESTRequest;
-    function send(url: string; AResource: string;
-      AMethod: TRESTRequestMethod): string;
-    procedure SetAccessToken(const Value: string);
-    function GetAccessToken: string;
-  public
-    StatusCode: integer;
-    ResponseText:string;
-    property AccessToken: string read GetAccessToken write SetAccessToken;
-    procedure prepare; virtual;
-    constructor create(ow: TComponent); override;
-    destructor destroy; override;
-    function Get(url: string; AResource: string = ''): string;virtual;
-    function GetStream(AUrl: string; AResource: string;
-      AStream: TStream): integer;virtual;
-    function SendStream(AUrl: string; AStream: TStream): integer;virtual;
-    function Post(url: string; AResource: string = ''): string;virtual;
-  end;
 
-  TRESTClientDropBoxDataset = class(TRESTClientDropBox)
-  private
-    RESTResponseDataSetAdapter1: TRESTResponseDataSetAdapter;
-    FDMemTable1: TFDMemTable;
-    function GetDataset: TDataset;
-    procedure SetDataset(const Value: TDataset);
-    procedure Setroot(const Value: string);
-    function GetRoot: string;
-  public
-    procedure prepare; override;
-    property RootElement: string read GetRoot write Setroot;
-    property DataSet: TDataset read GetDataset write SetDataset;
-    constructor create(ow: TComponent); override;
-    destructor destroy; override;
-    function SendStream(AUrl:string; AStream:TStream):integer;override;
-
-  end;
 
   TDropboxAccountInfo = Record
     email: string;
@@ -167,11 +107,11 @@ type
   private
     FStatusCode: integer;
     FDataset: TDataset;
-    FRestClient: TRESTClientDropBoxDataset;
-    FAuthBase: TDropboxAuthBase;
+    FRestClient: TRESTSocialClientDataset;
+    FAuthBase: TCustomSocialAuthBase;
     FListFolder: TDropboxListFolderList;
     FAccountInfo: TDropboxAccountInfo;
-    procedure SetAuthBase(const Value: TDropboxAuthBase);
+    procedure SetAuthBase(const Value: TCustomSocialAuthBase);
     procedure SetListFolder(const Value: TDropboxListFolderList);
     procedure SetAccountInfo(const Value: TDropboxAccountInfo);
   protected
@@ -198,8 +138,12 @@ type
       write SetAccountInfo;
 
   published
-    property AuthBase: TDropboxAuthBase read FAuthBase write SetAuthBase;
+    property AuthBase: TCustomSocialAuthBase read FAuthBase write SetAuthBase;
   end;
+
+
+
+
 
 implementation
 
@@ -236,31 +180,8 @@ const
   url_fileopsMove = apiServer + '/1/fileops/move';
   url_list_Folder = apiServer + '/2/files/list_folder/';
 
-function Indy_Send_File(AccessToken, AUrl:string; AStream: TStream;
-  ASSL: boolean; var AResponseText:string): integer;
-var
-  LidHTTP: TIdHttp;
-begin
-  LidHTTP := TIdHttp.create(nil);
-  try
-    LidHTTP.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' +      AccessToken;
-    LidHTTP.Request.ContentType := 'application/octet-stream';
-    //LIdHttp.Request.CustomHeaders.Values['Dropbox-API-Arg'] := '{ "path":"/apps/tete.pdf", "mode":"add","autorename": true, "mute": false }';
-    if ASSL then
-      LidHTTP.IOHandler := TIdSSLIOHandlerSocketOpenSSL.create(LidHTTP);
-    AStream.Position := 0;
 
-    try
-    LidHTTP.Put(AUrl + '', AStream);
-    except
-    end;
-    AResponseText := LIdHttp.Response.ResponseText;
-    result := LidHTTP.ResponseCode;
 
-  finally
-    LidHTTP.Free;
-  end;
-end;
 
 (*
 
@@ -320,49 +241,12 @@ end;
   end;
 *)
 
-function Indy_Download_File(AccessToken: string; const exportLinks: string;
-  AStream: System.Classes.TStream; FSSL: boolean): integer;
-var
-  res: String;
-  LidHTTP: TIdHttp;
-  link: string;
-begin
-
-  LidHTTP := TIdHttp.create(nil);
-  try
-    // add authorization from stored key
-    LidHTTP.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' +
-      AccessToken;
-
-    // use SSL
-    if FSSL then
-      LidHTTP.IOHandler := TIdSSLIOHandlerSocketOpenSSL.create(LidHTTP);
-
-    try
-      AStream.Position := 0;
-      LidHTTP.Get(exportLinks, AStream);
-      result := LidHTTP.Response.ResponseCode;
-    except
-      // on E: Exception do begin
-      // rezultat_String.Add ('Eroare ! ' + E.Message);
-      // end;
-      raise;
-    end;
-
-    AStream.Position := 0;
-    // Stream.SaveToFile(file_name)
-
-  finally
-    LidHTTP.Free;
-    // Stream.Free;
-  end;
-end;
 
 constructor TDropbox.create(ow: TComponent);
 begin
   inherited create(ow);
-  FAuthBase := TDropboxAuthBase.create;
-  FRestClient := TRESTClientDropBoxDataset.create(self);
+  FAuthBase := TCustomSocialAuthBase.create;
+  FRestClient := TRESTSocialClientDataset.create(self);
   FListFolder := TDropboxListFolderList.create; // (true);
 end;
 
@@ -433,8 +317,8 @@ end;
 
 procedure TDropbox.prepare;
 begin
-  FRestClient.prepare;
-  FRestClient.FAuth2.AccessToken := FAuthBase.AccessToken;
+  FRestClient.Clear;
+  FRestClient.Auth2.AccessToken := FAuthBase.AccessToken;
 end;
 
 procedure TDropbox.SetAccountInfo(const Value: TDropboxAccountInfo);
@@ -442,7 +326,7 @@ begin
   FAccountInfo := Value;
 end;
 
-procedure TDropbox.SetAuthBase(const Value: TDropboxAuthBase);
+procedure TDropbox.SetAuthBase(const Value: TCustomSocialAuthBase);
 begin
   FAuthBase := Value;
 end;
@@ -465,161 +349,18 @@ begin
   Command := url_putFile + AFile_To;
   AStream :=TFileStream.Create(AFileName,fmOpenRead);
   try
-    FStatusCode := FRestClient.SendStream(Command, AStream);
+    FStatusCode := FRestClient.SendStream(Command,'', AStream);
   finally
     AStream.Free;
   end;
 end;
 
-{ TRESTClientDropBox }
 
-constructor TRESTClientDropBox.create(ow: TComponent);
-begin
-  inherited;
-  FAuth2 := TOAuth2Authenticator.create(self);
-
-  RESTResponse1 := TRESTResponse.create(self);
-  RESTResponse1.ContentType := 'application/json';
-
-  RESTRequest1 := TRESTRequest.create(self);
-  RESTRequest1.Client := self;
-  RESTRequest1.Response := RESTResponse1;
-
-  Authenticator := FAuth2;
-  Accept := 'application/json, text/plain; q=0.9, text/html;q=0.8,';
-  AcceptCharset := 'UTF-8, *;q=0.8';
-  HandleRedirects := True;
-  RaiseExceptionOn500 := false;
-
-end;
-
-destructor TRESTClientDropBox.destroy;
-begin
-  FAuth2.Free;
-  inherited;
-end;
-
-function TRESTClientDropBox.send(url: string; AResource: string;
-  AMethod: TRESTRequestMethod): string;
-begin
-  RESTRequest1.Method := AMethod;
-  BaseURL := url;
-  RESTRequest1.Execute;
-  result := RESTResponse1.Content;
-  StatusCode := RESTResponse1.StatusCode;
-end;
-
-function TRESTClientDropBox.SendStream(AUrl: string; AStream: TStream): integer;
-begin
-  result := Indy_Send_File(AccessToken, AUrl,  AStream, True,ResponseText );
-end;
-
-procedure TRESTClientDropBox.SetAccessToken(const Value: string);
-begin
-  FAuth2.AccessToken := Value;
-end;
-
-function TRESTClientDropBox.Get(url: string; AResource: string = ''): string;
-begin
-  result := send(url, AResource, TRESTRequestMethod.rmGET);
-end;
-
-function TRESTClientDropBox.GetAccessToken: string;
-begin
-  result := FAuth2.AccessToken;
-end;
-
-function TRESTClientDropBoxDataset.GetRoot: string;
-begin
-  result := RESTResponseDataSetAdapter1.RootElement;
-end;
-
-procedure TRESTClientDropBoxDataset.prepare;
-begin
-  inherited;
-
-  FDMemTable1.Close;
-  FDMemTable1.Fields.Clear;
-  RESTResponseDataSetAdapter1.DataSet := FDMemTable1;
-  RESTResponseDataSetAdapter1.Response := RESTResponse1;
-  RESTResponseDataSetAdapter1.RootElement := '';
-
-end;
-
-function TRESTClientDropBox.GetStream(AUrl, AResource: string;
-  AStream: TStream): integer;
-begin
-  result := Indy_Download_File(AccessToken, AUrl, AStream, True);
-end;
-
-function TRESTClientDropBox.Post(url: string; AResource: string = ''): string;
-begin
-  result := send(url, AResource, TRESTRequestMethod.rmPost);
-end;
-
-procedure TRESTClientDropBox.prepare;
-begin
-  RESTRequest1.Params.Clear;
-  RESTRequest1.SynchronizedEvents := false;
-end;
 
 { TDropboxConfig }
 
-procedure TDropboxBase.FromJson(aJson: string);
-var
-  js: TJsonObject;
-begin
-  js := TJsonObject.ParseJSONValue(AJson) as TJsonObject;
-  try
-    LoadFromJson(js);
-  finally
-    js.Free;
-  end;
-end;
-
-procedure TDropboxBase.LoadFromJson(js: TJsonObject);
-begin
-end;
-
-procedure TDropboxBase.LoadFromJsonFile(sFile: string);
-var
-  str: TstringList;
-  js: TJsonObject;
-begin
-  str := TstringList.create;
-  try
-    str.LoadFromFile(sFile);
-    FromJson(str.text);
-  finally
-    str.Free;
-  end;
-end;
 
 { TDropboxAuthBase }
-
-procedure TDropboxAuthBase.LoadFromJson(js: TJsonObject);
-begin
-  inherited;
-  js.TryGetValue<string>('AccessToken', FAccessToken);
-  js.TryGetValue<string>('Client_ID', FClient_ID);
-  js.TryGetValue<string>('Client_Secret', FClient_Secret);
-
-end;
-
-procedure TDropboxAuthBase.SetAccessToken(const Value: string);
-begin
-  FAccessToken := Value;
-end;
-
-procedure TDropboxAuthBase.SetClient_ID(const Value: string);
-begin
-  FClient_ID := Value;
-end;
-
-procedure TDropboxAuthBase.SetClient_Secret(const Value: string);
-begin
-  FClient_Secret := Value;
-end;
 
 { TDropboxAccountInfo }
 
@@ -734,75 +475,5 @@ begin
   Fthumb_exists := Value;
 end;
 
-{ TRESTClientDropBoxDataset }
-
-constructor TRESTClientDropBoxDataset.create(ow: TComponent);
-begin
-  inherited;
-  FDMemTable1 := TFDMemTable.create(self);
-  with FDMemTable1 do
-  begin
-    FetchOptions.AssignedValues := [evMode];
-    FetchOptions.Mode := fmAll;
-    ResourceOptions.AssignedValues := [rvSilentMode];
-    ResourceOptions.SilentMode := True;
-    UpdateOptions.AssignedValues := [uvCheckRequired];
-    UpdateOptions.CheckRequired := false;
-  end;
-
-  RESTResponseDataSetAdapter1 := TRESTResponseDataSetAdapter.create(self);
-  RESTResponseDataSetAdapter1.DataSet := FDMemTable1;
-  RESTResponseDataSetAdapter1.FieldDefs.Clear;
-  RESTResponseDataSetAdapter1.Response := RESTResponse1;
-  RESTResponseDataSetAdapter1.NestedElements := True;
-
-end;
-
-destructor TRESTClientDropBoxDataset.destroy;
-begin
-
-  inherited;
-end;
-
-function TRESTClientDropBoxDataset.GetDataset: TDataset;
-begin
-  result := RESTResponseDataSetAdapter1.DataSet;
-end;
-
-function TRESTClientDropBoxDataset.SendStream(AUrl: string;
-  AStream: TStream): integer;
-begin
- result := inherited SendStream(AUrl,AStream);
-{  DataSet := nil;
-  RestRequest1.Params.Clear;
-  RestRequest1.ClearBody;
-  ContentType := 'application/octet-stream';
-  RestRequest1.Method := TRESTRequestMethod.rmPOST;
-  BaseURL := AUrl;
-  RestRequest1.AddBody(AStream,TRestContentType.ctAPPLICATION_OCTET_STREAM );
-  RestRequest1.Execute;   // Erro
-}
-end;
-
-procedure TRESTClientDropBoxDataset.SetDataset(const Value: TDataset);
-begin
-  RESTResponseDataSetAdapter1.DataSet := Value;
-  if Value = nil then
-  begin
-    RESTResponseDataSetAdapter1.Response := nil;
-    RESTResponseDataSetAdapter1.AutoUpdate := false;
-  end
-  else
-  begin
-    RESTResponseDataSetAdapter1.Response := RESTResponse1;
-    RESTResponseDataSetAdapter1.AutoUpdate := true;
-  end;
-end;
-
-procedure TRESTClientDropBoxDataset.Setroot(const Value: string);
-begin
-  RESTResponseDataSetAdapter1.RootElement := Value;
-
-end;
 
 end.
