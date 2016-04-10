@@ -15,18 +15,14 @@ type
   TJsonType = (jtUnknown, jtObject, jtArray, jtString, jtTrue, jtFalse,
     jtNumber, jtDate, jtDateTime, jtBytes);
 
+
+
   TObjectHelper = class Helper for TObject
   private
   public
-    class procedure Using<T>(O:T; Proc: TProc<T>); static;
-    procedure Anonimous<T:Class>( Proc: TProc<T> );
-    procedure Run<T:Class>(Proc: TProc<T> );
-    procedure Queue<T:Class>( Proc:TProc<T>);
-    procedure Synchronize<T:Class>( Proc:TProc<T>);
-
-    class function FromJson(AJson: String): TObject; static;
-    function Clone: TObject;
-    function asJson: string;
+    class function FromJson(AJson: String): System.TObject; static;
+    function Clone: System.TObject;
+    function AsJson: string;
   end;
 
   TJSONObjectHelper = class helper for TJSONObject
@@ -50,7 +46,7 @@ type
     function A(chave: string): TJSONArray;
     function AsArray: TJSONArray;
     function Contains(chave: string): boolean;
-    function asObject: TObject;
+    function asObject: System.TObject;
     class function FromObject<T>(AObject: T): TJSONObject; overload;
     // class function FromObject(AObject: Pointer): TJSONObject;overload;
     class function FromRecord<T>(rec: T): TJSONObject;
@@ -420,7 +416,7 @@ begin
   result := V;
 end;
 
-function TJSONObjectHelper.asObject: TObject;
+function TJSONObjectHelper.asObject: System.TObject;
 var
   m: TJSONunMarshal;
 begin
@@ -485,18 +481,9 @@ end;
 
 { TObjectHelper }
 
-class procedure TObjectHelper.Using<T>(O: T; Proc: TProc<T>);
-var obj:TObject;
-begin
-  try
-    Proc(O);
-  finally
-    freeAndNil(o);
-  end;
-end;
 
 
-function TObjectHelper.asJson: string;
+function TObjectHelper.AsJson: string;
 var
   j: TJsonValue;
   m: TJSONMarshal;
@@ -510,12 +497,13 @@ begin
   end;
 end;
 
-function TObjectHelper.Clone: TObject;
+function TObjectHelper.Clone: System.TObject;
 begin
   result := TObject.FromJson(asJson);
 end;
 
-class function TObjectHelper.FromJson(AJson: String): TObject;
+
+class function TObjectHelper.FromJson(AJson: String): System.TObject;
 var
   m: TJSONunMarshal;
   V: TJSONObject;
@@ -530,38 +518,6 @@ begin
 end;
 
 
-procedure TObjectHelper.Queue<T>(Proc: TProc<T>);
-begin
-   TThread.Queue(nil,
-       procedure
-       begin
-             Proc(self);
-       end);
-end;
-
-procedure TObjectHelper.Run<T>(Proc: TProc<T>);
-begin
-   TThread.CreateAnonymousThread(
-           procedure
-              begin
-                 proc(self);
-              end ).Start;
-end;
-
-
-procedure TObjectHelper.Synchronize<T>(Proc: TProc<T>);
-begin
-   TThread.Synchronize(nil,
-   procedure
-   begin
-      proc(self);
-   end);
-end;
-
-procedure TObjectHelper.Anonimous<T>(Proc: TProc<T>);
-begin
-   Proc(self);
-end;
 
 
 function ISOTimeToString(ATime: TTime): string;
@@ -620,6 +576,7 @@ end;
 // begin
 // Result := FormatDateTime('HH:nn:ss', ATime);
 // end;
+
 
 initialization
 
