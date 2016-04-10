@@ -24,6 +24,7 @@ Type
    end;
 
    TObjectHelper = class helper for TObject
+   public
       class procedure Using<T>(O:T; Proc: TProc<T>); static;
       procedure Anonimous<T:Class>( Proc: TProc<T> );
       procedure Run<T:Class>(Proc: TProc<T> );
