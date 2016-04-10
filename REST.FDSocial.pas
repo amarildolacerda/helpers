@@ -38,16 +38,11 @@ type
     property DataSet: TDataset read GetDataSet write SetDataSet;
   end;
 
-procedure Register;
 
 implementation
 
 uses DateUtils;
 
-procedure Register;
-begin
-  RegisterComponents('REST Client', [TRESTSocialClientDataset,TRESTSocialClient]);
-end;
 
 {
   *************************** TRESTSocialClientDataset ***************************
@@ -168,8 +163,8 @@ end;
 procedure TRESTSocialClientDataset.Clear;
 begin
   inherited;
-  FDMemTable1.Close;
-  FDMemTable1.Fields.Clear;
+  Dataset.Close;
+  Dataset.Fields.Clear;
 end;
 
 function TRESTSocialClientDataset.GetDataSet: TDataset;

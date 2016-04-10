@@ -49,14 +49,19 @@ type
     procedure SetRequestMethod(const Value: TRESTRequestMethod);
     procedure SetResponseText(const Value: string);
     procedure SetOnResponseTextChange(const Value: TNotifyEvent);
+    function GetParameterByName(AName: string): TRESTRequestParameter;
+    procedure SetParameterByName(AName: string;
+      const AValue: TRESTRequestParameter);
   protected
-    function GetAuth2: TOAuth2Authenticator; virtual;
 
   public
     StatusCode: Integer;
     constructor create(ow: TComponent); override;
     destructor destroy; override;
     procedure Clear; virtual;
+    function GetAuth2: TOAuth2Authenticator; virtual;
+    property ParameterByName[AName: string]: TRESTRequestParameter read GetParameterByName write SetParameterByName;
+
     // configuração de acesso ao servidor
     property ResponseText: string read FResponseText write SetResponseText;
     function Get(url: string; AResource,AService: string): string; overload; virtual;
@@ -276,6 +281,12 @@ begin
   result := FAuth2;
 end;
 
+function TRESTSocialClient.GetParameterByName(
+  AName: string): TRESTRequestParameter;
+begin
+  result:= RESTRequest1.Params.ParameterByName(AName);
+end;
+
 procedure TRESTSocialClient.Clear;
 begin
   RESTRequest1.Params.Clear;
@@ -313,6 +324,7 @@ function TRESTSocialClient.GetStream(AUrl: string; AResource: string;
 begin
   result := Indy_Download_File(AccessToken, AUrl + AResource, AStream, true);
 end;
+
 
 function TRESTSocialClient.Post(AService:string): string;
 begin
@@ -364,6 +376,23 @@ end;
 procedure TRESTSocialClient.SetOnResponseTextChange(const Value: TNotifyEvent);
 begin
   FOnResponseTextChange := Value;
+end;
+
+procedure TRESTSocialClient.SetParameterByName(AName: string;
+  const AValue: TRESTRequestParameter);
+var lcl:TRESTRequestParameter;
+begin
+  lcl := RESTRequest1.Params.ParameterByName(AName);
+  if assigned(lcl) then
+  with lcl do
+       begin
+            Name := AValue.name;
+            Value := AValue.Value;
+            Kind := AValue.Kind;
+            Options := AValue.Options;
+            ContentType := AValue.ContentType;
+            DisplayName := AValue.DisplayName;
+       end;
 end;
 
 procedure TRESTSocialClient.SetRequestMethod(const Value: TRESTRequestMethod);

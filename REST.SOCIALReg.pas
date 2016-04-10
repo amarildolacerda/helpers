@@ -1,4 +1,4 @@
-unit REST.SOCIALReg;
+unit REST.SocialReg;
 
 interface
 
