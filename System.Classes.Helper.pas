@@ -13,7 +13,7 @@ Type
     procedure FireEvent(Sender:TObject);
   end;
 
-  TObject = class(System.TObject)
+  TObjectExt = class(System.TObject)
   private
     FOnFireEvent: TProc<TObject>;
     procedure SetOnFireEvent(const Value: TProc<TObject>);
@@ -26,10 +26,10 @@ Type
    TObjectHelper = class helper for TObject
    public
       class procedure Using<T>(O:T; Proc: TProc<T>); static;
-      procedure Anonimous<T:Class>( Proc: TProc<T> );
-      procedure Run<T:Class>(Proc: TProc<T> );
-      procedure Queue<T:Class>( Proc:TProc<T>);
-      procedure Synchronize<T:Class>( Proc:TProc<T>);
+      class function Anonimous<T:Class>(O:T; Proc: TProc<T> ):TObject;static;
+      class procedure Run<T:Class>(O:T;Proc: TProc<T> );static;
+      class function Queue<T:Class>(O:T; Proc:TProc<T>):TObject;static;
+      class function Synchronize<T:Class>(O:T; Proc:TProc<T>):TObject;static;
   end;
 
 implementation
@@ -46,55 +46,58 @@ begin
 end;
 
 
-procedure TObject.FireEvent;
+procedure TObjectExt.FireEvent;
 begin
    FireEvent(self);
 end;
 
-procedure TObjectHelper.Queue<T>(Proc: TProc<T>);
+class function TObjectHelper.Queue<T>(O:T;Proc: TProc<T>):TObject;
 begin
+   result := O;
    TThread.Queue(nil,
        procedure
        begin
-             Proc(self);
+             Proc(O);
        end);
 end;
 
-procedure TObjectHelper.Run<T>(Proc: TProc<T>);
+class procedure TObjectHelper.Run<T>(O:T;Proc: TProc<T>);
 begin
    TThread.CreateAnonymousThread(
            procedure
               begin
-                 proc(self);
+                 proc(O);
               end ).Start;
 end;
 
 
 
-procedure TObjectHelper.Synchronize<T>(Proc: TProc<T>);
+class function TObjectHelper.Synchronize<T>(O:T;Proc: TProc<T>):TObject;
 begin
+   result := O;
    TThread.Synchronize(nil,
    procedure
    begin
-      proc(self);
+      proc(O);
    end);
 end;
 
-procedure TObjectHelper.Anonimous<T>(Proc: TProc<T>);
+class function TObjectHelper.Anonimous<T>(O:T;Proc: TProc<T>):TObject;
 begin
-   Proc(self);
+   result := O;
+   Proc(O);
 end;
 
 
 { TObject }
 
-procedure TObject.FireEvent(Sender: TObject);
+procedure TObjectExt.FireEvent(Sender: TObject);
 begin
    if assigned(FOnFireEvent) then
       FonFireEvent(Sender);
 end;
 
-procedure TObject.SetOnFireEvent(const Value: TProc<TObject>);
+procedure TObjectExt.SetOnFireEvent(const Value: TProc<TObject>);
 begin
   FOnFireEvent := Value;
 end;
