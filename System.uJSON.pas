@@ -1,43 +1,41 @@
-{
-  Autor: Amarildo Lacerda
-  Data: 28/01/2016
-  Altera√ßoes: 
-      28/01/16 - Primeira vers√£o publicada
-}
-
 unit System.uJson;
 
 interface
 
-{.$I Delphi.inc }
-
+{$I Delphi.inc }
 {$IFDEF UNICODE}
 {$DEFINE XE}
 {$ENDIF}
 
-uses System.JSON,RegularExpressions, {RTTI, TypInfo, DBXJson,} DBXJsonReflect;
+uses System.Classes, System.Types, System.SysUtils, System.JSON,
+  RegularExpressions, {RTTI, TypInfo, DBXJson,} DBXJsonReflect;
 
 type
 
-
-   TJsonType = (jtUnknown, jtObject, jtArray, jtString, jtTrue,
-       jtFalse, jtNumber, jtDate, jtDateTime, jtBytes);
-
+  TJsonType = (jtUnknown, jtObject, jtArray, jtString, jtTrue, jtFalse,
+    jtNumber, jtDate, jtDateTime, jtBytes);
 
   TObjectHelper = class Helper for TObject
-    public
-     class function FromJson(AJson:String) : TObject;static;
-     function Close:TObject;
-     function asJson:string;
+  private
+  public
+    class procedure Using<T>(O:T; Proc: TProc<T>); static;
+    procedure Anonimous<T:Class>( Proc: TProc<T> );
+    procedure Run<T:Class>(Proc: TProc<T> );
+    procedure Queue<T:Class>( Proc:TProc<T>);
+    procedure Synchronize<T:Class>( Proc:TProc<T>);
+
+    class function FromJson(AJson: String): TObject; static;
+    function Clone: TObject;
+    function asJson: string;
   end;
 
   TJSONObjectHelper = class helper for TJSONObject
   private
 
   public
-   {$ifdef VER270}
-    function ToJSON:string;
-   {$endif}
+{$IFDEF VER270}
+    function ToJSON: string;
+{$ENDIF}
     class function GetTypeAsString(AType: TJsonType): string; static;
     class function GetJsonType(AJsonValue: TJsonValue): TJsonType; static;
     class function Stringify(so: TJSONObject): string;
@@ -45,17 +43,20 @@ type
     function V(chave: String): variant;
     function S(chave: string): string;
     function I(chave: string): integer;
-    function O(chave: string): TJSONObject;overload;
-    function O(index:integer): TJsonObject;overload;
+    function O(chave: string): TJSONObject; overload;
+    function O(index: integer): TJSONObject; overload;
     function F(chave: string): Extended;
     function B(chave: string): boolean;
     function A(chave: string): TJSONArray;
     function AsArray: TJSONArray;
-    function Contains(chave:string):boolean;
-    function asObject:TObject;
-    class function FromObject<T>(AObject: T): TJSONObject;overload;
-//    class function FromObject(AObject: Pointer): TJSONObject;overload;
-    class function FromRecord<T>(rec:T):TJSONObject;
+    function Contains(chave: string): boolean;
+    function asObject: TObject;
+    class function FromObject<T>(AObject: T): TJSONObject; overload;
+    // class function FromObject(AObject: Pointer): TJSONObject;overload;
+    class function FromRecord<T>(rec: T): TJSONObject;
+    function addPair(chave: string; value: integer): TJSONObject; overload;
+    function addPair(chave: string; value: Double): TJSONObject; overload;
+    function addPair(chave: string; value: TDatetime): TJSONObject; overload;
   end;
 
   TJSONArrayHelper = class helper for TJSONArray
@@ -65,25 +66,24 @@ type
 
   TJSONValueHelper = class helper for TJsonValue
   public
-   {$ifdef VER270}
-    function ToJSON:string;
-   {$endif}
-    function AsArray:TJsonArray;
-    function AsPair:TJsonPair;
-    function Datatype:TJsonType;
-    function asObject:TJsonObject;
+{$IFDEF VER270}
+    function ToJSON: string;
+{$ENDIF}
+    function AsArray: TJSONArray;
+    function AsPair: TJsonPair;
+    function Datatype: TJsonType;
+    function asObject: TJSONObject;
   end;
 
-  TJSONPairHelper = class helper for TJSONPair
+  TJSONPairHelper = class helper for TJsonPair
   public
-     function asObject:TJsonObject;
+    function asObject: TJSONObject;
   end;
 
   IJson = TJSONObject;
   IJSONArray = TJSONArray;
 
   TJson = TJSONObject;
-
 
 function ReadJsonString(const dados: string; chave: string): string;
 function ReadJsonInteger(const dados: string; chave: string): integer;
@@ -92,76 +92,71 @@ function ReadJsonFloat(const dados: string; chave: string): Extended;
 function JSONstringify(so: IJson): string;
 function JSONParse(const dados: string): IJson;
 
-
-
-function ISODateTimeToString(ADateTime: TDateTime): string;
-function ISODateToString(ADate: TDateTime): string;
+function ISODateTimeToString(ADateTime: TDatetime): string;
+function ISODateToString(ADate: TDatetime): string;
 function ISOTimeToString(ATime: TTime): string;
 
-function ISOStrToDateTime(DateTimeAsString: string): TDateTime;
+function ISOStrToDateTime(DateTimeAsString: string): TDatetime;
 function ISOStrToDate(DateAsString: string): TDate;
 function ISOStrToTime(TimeAsString: string): TTime;
 
-
-
 implementation
 
-uses sysUtils, db, System.Rtti, System.TypInfo, System.DateUtils;
+uses db, System.Rtti, System.TypInfo, System.DateUtils;
 
 var
   LJson: TJson;
 
-
- class function TJSONObjectHelper.GetTypeAsString(AType: TJsonType): string;
- begin
+class function TJSONObjectHelper.GetTypeAsString(AType: TJsonType): string;
+begin
   case AType of
-     jtUnknown: result := 'Unknown';
-    jtString: result := 'String';
-     jtTrue,
-     jtFalse: result := 'Boolean';
-     jtNumber: result := 'Extended';
-     jtDate: result := 'TDate';
-     jtDateTime: result := 'TDateTime';
-     jtBytes: result := 'Byte';
-   end;
- end;
+    jtUnknown:
+      result := 'Unknown';
+    jtString:
+      result := 'String';
+    jtTrue, jtFalse:
+      result := 'Boolean';
+    jtNumber:
+      result := 'Extended';
+    jtDate:
+      result := 'TDate';
+    jtDateTime:
+      result := 'TDateTime';
+    jtBytes:
+      result := 'Byte';
+  end;
+end;
 
-
- class function TJSONObjectHelper.GetJsonType(AJsonValue: TJsonValue): TJsonType;
-   var
-     LJsonString: TJSONString;
-   begin
-     if AJsonValue is TJSONObject then
-       result := jtObject
-     else
-       if AJsonValue is TJSONArray then
-         result := jtArray
-       else
-         if (AJsonValue is TJSONNumber) then
-           result := jtNumber
-         else
-           if AJsonValue is TJSONTrue then
-             result := jtTrue
-           else
-             if  AJsonValue is TJSONFalse then
-               result := jtFalse
-             else
-               if AJsonValue is TJSONString then
-               begin
-                 LJsonString := (AJsonValue as TJSONString);
-                 if TRegEx.IsMatch(LJsonString.Value, '^([0-9]{4})-?(1[0-2]|0[1-9])-?(3[01]|0[1-9]|[12][0-9])(T| )(2[0-3]|[01][0-9]):?([0-5][0-9]):?([0-5][0-9])$') then
-                   result := jtDateTime
-                 else
-                   if TRegEx.IsMatch(LJsonString.Value, '^([0-9]{4})(-?)(1[0-2]|0[1-9])\2(3[01]|0[1-9]|[12][0-9])$') then
-                     result := jtDate
-                   else
-                     result := jtString
-               end
-               else
-                 result := jtUnknown;
-   end;
-
-
+class function TJSONObjectHelper.GetJsonType(AJsonValue: TJsonValue): TJsonType;
+var
+  LJsonString: TJSONString;
+begin
+  if AJsonValue is TJSONObject then
+    result := jtObject
+  else if AJsonValue is TJSONArray then
+    result := jtArray
+  else if (AJsonValue is TJSONNumber) then
+    result := jtNumber
+  else if AJsonValue is TJSONTrue then
+    result := jtTrue
+  else if AJsonValue is TJSONFalse then
+    result := jtFalse
+  else if AJsonValue is TJSONString then
+  begin
+    LJsonString := (AJsonValue as TJSONString);
+    if TRegEx.IsMatch(LJsonString.value,
+      '^([0-9]{4})-?(1[0-2]|0[1-9])-?(3[01]|0[1-9]|[12][0-9])(T| )(2[0-3]|[01][0-9]):?([0-5][0-9]):?([0-5][0-9])$')
+    then
+      result := jtDateTime
+    else if TRegEx.IsMatch(LJsonString.value,
+      '^([0-9]{4})(-?)(1[0-2]|0[1-9])\2(3[01]|0[1-9]|[12][0-9])$') then
+      result := jtDate
+    else
+      result := jtString
+  end
+  else
+    result := jtUnknown;
+end;
 
 function JSONParse(const dados: string): IJson;
 begin
@@ -175,27 +170,27 @@ end;
 
 function ReadJsonFloat(const dados: string; chave: string): Extended;
 var
-  i: IJson;
+  I: IJson;
 begin
-  i := JSONParse(dados);
+  I := JSONParse(dados);
   try
-    i.TryGetValue<Extended>(chave, result);
+    I.TryGetValue<Extended>(chave, result);
   finally
-    i.Free;
+    I.Free;
   end;
 end;
 
 function ReadJsonString(const dados: string; chave: string): string;
 var
   j: TJson;
-  i: IJson;
-  v: variant;
+  I: IJson;
+  V: variant;
 begin
   j := JSONParse(dados);
-  // usar variavel local para n√£o gerar conflito com Multi_threaded application
+  // usar variavel local para n„o gerar conflito com Multi_threaded application
   try
-    j.TryGetValue<variant>(chave, v);
-    result := v;
+    j.TryGetValue<variant>(chave, V);
+    result := V;
     { case VarTypeToDataType of
       varString: Result := I.S[chave];
       varInt64: Result := IntToStr(I.I[chave]);
@@ -215,7 +210,7 @@ end;
   j: TJson;
   begin
   result := JSONParse(dados);
-  { // usar variavel local para n√£o gerar conflito com Multi_threaded application
+  { // usar variavel local para n„o gerar conflito com Multi_threaded application
   try
   result := j.parse(dados);
   finally
@@ -226,10 +221,10 @@ end;
 function ReadJsonInteger(const dados: string; chave: string): integer;
 var
   j: TJson;
-  i: IJson;
+  I: IJson;
 begin
   j := JSONParse(dados);
-  // usar variavel local para n√£o gerar conflito com Multi_threaded application
+  // usar variavel local para n„o gerar conflito com Multi_threaded application
   try
     j.TryGetValue<integer>(chave, result);
   finally
@@ -256,7 +251,29 @@ end;
 
 function TJSONObjectHelper.A(chave: string): TJSONArray;
 begin
-  TryGetValue<TJSONArray>(chave,result);
+  TryGetValue<TJSONArray>(chave, result);
+end;
+
+function TJSONObjectHelper.addPair(chave: string; value: integer): TJSONObject;
+begin
+  result := addPair(chave, TJSONNumber.Create(value));
+end;
+
+function TJSONObjectHelper.addPair(chave: string; value: Double): TJSONObject;
+begin
+  result := addPair(chave, TJSONNumber.Create(value));
+end;
+
+function TJSONObjectHelper.addPair(chave: string; value: TDatetime)
+  : TJSONObject;
+var
+  S: string;
+begin
+  if trunc(value) <> value then
+    S := ISODateTimeToString(value)
+  else
+    S := ISODateToString(value);
+  result := addPair(chave, S);
 end;
 
 function TJSONObjectHelper.AsArray: TJSONArray;
@@ -266,36 +283,45 @@ end;
 
 function TJSONObjectHelper.B(chave: string): boolean;
 begin
-   tryGetValue<boolean>(chave,result);
+  TryGetValue<boolean>(chave, result);
 end;
 
 function TJSONObjectHelper.Contains(chave: string): boolean;
 var
-  LJSONValue: TJSONValue;
+  LJSONValue: TJsonValue;
 begin
   LJSONValue := FindValue(chave);
-  Result := LJSONValue <> nil;
+  result := LJSONValue <> nil;
 end;
 
 function TJSONObjectHelper.F(chave: string): Extended;
 begin
-  tryGetValue<extended>(chave,result);
+  result := 0;
+  if FindValue(chave) <> nil then
+    TryGetValue<Extended>(chave, result);
 end;
 
-function TJSONObjectHelper.i(chave: string): integer;
+function TJSONObjectHelper.I(chave: string): integer;
 begin
-  TryGetValue<integer>(chave, result);
+  result := 0;
+  if FindValue(chave) <> nil then
+    TryGetValue<integer>(chave, result);
 end;
 
-function TJSONObjectHelper.O(index: integer): TJsonObject;
-var pair:TJSONPair;
+function TJSONObjectHelper.O(index: integer): TJSONObject;
+var
+  pair: TJsonPair;
 begin
-   result := TJsonObject( get(index) );
+  result := TJSONObject(get(index));
 end;
 
 function TJSONObjectHelper.O(chave: string): TJSONObject;
+var
+  V: TJsonValue;
 begin
-  TryGetValue<TJSONObject>(chave, result);
+  V := GetValue(chave);
+  result := V as TJSONObject;
+  // TryGetValue<TJSONObject>(chave, result);
 end;
 
 class function TJSONObjectHelper.Parse(const dados: string): TJSONObject;
@@ -303,76 +329,80 @@ begin
   result := TJSONObject.ParseJSONValue(dados) as TJSONObject;
 end;
 
-
 class function TJSONObjectHelper.FromRecord<T>(rec: T): TJSONObject;
 var
-  m:TJSONMarshal;
-  js:TJSONValue;
+  m: TJSONMarshal;
+  js: TJsonValue;
 begin
-{  m := TJSONMarshal.Create;
-  try
-  js := m.Marshal(AObject);
-  result := js as TJSONObject;
-  finally
+  { m := TJSONMarshal.Create;
+    try
+    js := m.Marshal(AObject);
+    result := js as TJSONObject;
+    finally
     m.Free;
-  end;
+    end;
   }
-   result := TJSONObject.FromObject<T>(rec);
+  result := TJSONObject.FromObject<T>(rec);
 end;
 
 class function TJSONObjectHelper.FromObject<T>(AObject: T): TJSONObject;
-var typ:TRttiType;
-    ctx : TRttiContext;
-    field : TRttiField;
-    tk:TTypeKind;
-    P:Pointer;
-    key:String;
-    FRecord  : TRttiRecordType;
-    FMethod: TRttiMethod;
+var
+  typ: TRttiType;
+  ctx: TRttiContext;
+  field: TRttiField;
+  tk: TTypeKind;
+  P: Pointer;
+  key: String;
+  FRecord: TRttiRecordType;
+  FMethod: TRttiMethod;
 begin
-   result := TJsonObject.Create;
-   ctx := TRttiContext.Create;
-   typ := ctx.GetType( TypeInfo(T) );
-   P := @AObject;
-   for field in typ.GetFields do
-     begin
-        key := field.Name.ToLower;
-        if not (field.Visibility in [mvPublic, mvPublished]) then continue;
-        tk := field.FieldType.TypeKind;
-        case tk of
-          tkRecord:
-             begin
-{                 FRecord := ctx.GetType(field.GetValue(P).TypeInfo).AsRecord ;
-                 FMethod := FRecord.GetMethod('asJson');
-                 if assigned(FMethod) then
-                 begin
-                    result.AddPair(key,fMethod.asJson );
-                 end;}
-             end;
-          tkInteger : result.AddPair(key,TJSONNumber.Create( field.GetValue(P).AsInteger ));
-          tkFloat :
-          begin
-           if sametext(field.FieldType.Name ,'TDateTime') then
-             result.AddPair(TJSONPair.Create(key, ISODateTimeToString( field.GetValue(P).asExtended )))
-           else
-           if sametext(field.FieldType.Name ,'TDate') then
-             result.AddPair(TJSONPair.Create(key, IsoDateToString( field.GetValue(P).asExtended)))
-           else
-           if sametext(field.FieldType.Name ,'TTime') then
-             result.AddPair(TJSONPair.Create(key, isoTimeToString( field.GetValue(P).AsExtended) ))
-           else
-           if sametext(field.FieldType.Name ,'TTimeStamp') then
-             result.AddPair(TJSONPair.Create(key, ISODateTimeToString( field.GetValue(P).asExtended)))
-           else
-             result.AddPair(key,TJSONNumber.Create( field.GetValue(P).AsExtended ));
-          end
-        else
-           result.AddPair(TJsonPair.Create(key,field.getValue(P).ToString));
+  result := TJSONObject.Create;
+  ctx := TRttiContext.Create;
+  typ := ctx.GetType(TypeInfo(T));
+  P := @AObject;
+  for field in typ.GetFields do
+  begin
+    key := field.Name.ToLower;
+    if not(field.Visibility in [mvPublic, mvPublished]) then
+      continue;
+    tk := field.FieldType.TypeKind;
+    case tk of
+      tkRecord:
+        begin
+          { FRecord := ctx.GetType(field.GetValue(P).TypeInfo).AsRecord ;
+            FMethod := FRecord.GetMethod('asJson');
+            if assigned(FMethod) then
+            begin
+            result.AddPair(key,fMethod.asJson );
+            end; }
         end;
-     end;
+      tkInteger:
+        result.addPair(key, TJSONNumber.Create(field.GetValue(P).AsInteger));
+      tkFloat:
+        begin
+          if sametext(field.FieldType.Name, 'TDateTime') then
+            result.addPair(TJsonPair.Create(key,
+              ISODateTimeToString(field.GetValue(P).asExtended)))
+          else if sametext(field.FieldType.Name, 'TDate') then
+            result.addPair(TJsonPair.Create(key,
+              ISODateToString(field.GetValue(P).asExtended)))
+          else if sametext(field.FieldType.Name, 'TTime') then
+            result.addPair(TJsonPair.Create(key,
+              ISOTimeToString(field.GetValue(P).asExtended)))
+          else if sametext(field.FieldType.Name, 'TTimeStamp') then
+            result.addPair(TJsonPair.Create(key,
+              ISODateTimeToString(field.GetValue(P).asExtended)))
+          else
+            result.addPair(key, TJSONNumber.Create(field.GetValue(P)
+              .asExtended));
+        end
+    else
+      result.addPair(TJsonPair.Create(key, field.GetValue(P).ToString));
+    end;
+  end;
 end;
 
-function TJSONObjectHelper.s(chave: string): string;
+function TJSONObjectHelper.S(chave: string): string;
 begin
   TryGetValue<string>(chave, result);
 end;
@@ -382,33 +412,33 @@ begin
   result := so.ToJSON;
 end;
 
-function TJSONObjectHelper.v(chave: String): variant;
+function TJSONObjectHelper.V(chave: String): variant;
 var
-  v: string;
+  V: string;
 begin
-  TryGetValue<string>(chave, v);
-  result := v;
+  TryGetValue<string>(chave, V);
+  result := V;
 end;
 
-function TJSONObjectHelper.asObject:TObject;
-var m:TJSONunMarshal;
+function TJSONObjectHelper.asObject: TObject;
+var
+  m: TJSONunMarshal;
 begin
-    m:=TJSONunMarshal.create;
-    try
-    result := m.Unmarshal( self);
-    finally
-      m.Free;
-    end;
+  m := TJSONunMarshal.Create;
+  try
+    result := m.Unmarshal(self);
+  finally
+    m.Free;
+  end;
 end;
 
-{$ifdef VER270}
-    function TJSONObjectHelper.ToJSON:string;
-    begin
-       result := ToString;
-    end;
-   {$endif}
+{$IFDEF VER270}
 
-
+function TJSONObjectHelper.ToJSON: string;
+begin
+  result := ToString;
+end;
+{$ENDIF}
 { TJSONArrayHelper }
 
 function TJSONArrayHelper.Length: integer;
@@ -417,73 +447,120 @@ begin
 end;
 
 { TJSONValueHelper }
-{$ifdef VER270}
+{$IFDEF VER270}
+
 function TJSONValueHelper.ToJSON: string;
 begin
-    result := ToString;
+  result := ToString;
 end;
-{$endif}
-
+{$ENDIF}
 { TJSONValueHelper }
 
-function TJSONValueHelper.AsArray: TJsonArray;
+function TJSONValueHelper.AsArray: TJSONArray;
 begin
-    result := self as TJsonArray;
+  result := self as TJSONArray;
 end;
 
-function TJSONValueHelper.asObject: TJsonObject;
+function TJSONValueHelper.asObject: TJSONObject;
 begin
-   result := self as TJsonObject;
+  result := self as TJSONObject;
 end;
 
 function TJSONValueHelper.AsPair: TJsonPair;
 begin
-   result := TJSONPair(self);
+  result := TJsonPair(self);
 end;
 
 function TJSONValueHelper.Datatype: TJsonType;
 begin
-   result := TJSONObject.GetJsonType(self);
+  result := TJSONObject.GetJsonType(self);
 end;
 
 { TJSONPairHelper }
 
-function TJSONPairHelper.asObject: TJsonObject;
+function TJSONPairHelper.asObject: TJSONObject;
 begin
-   result := (self.JsonValue) as  TJsonObject;
+  result := (self.JsonValue) as TJSONObject;
 end;
 
 { TObjectHelper }
 
+class procedure TObjectHelper.Using<T>(O: T; Proc: TProc<T>);
+var obj:TObject;
+begin
+  try
+    Proc(O);
+  finally
+    freeAndNil(o);
+  end;
+end;
+
+
 function TObjectHelper.asJson: string;
-var J:TJSONValue;
-    m:TJSONMarshal;
+var
+  j: TJsonValue;
+  m: TJSONMarshal;
 begin
-    m:=TJSONMarshal.create;
-    try
-      j := m.Marshal(self) ;
-      result := j.ToJSON;
-    finally
-      m.Free;
-    end;
+  m := TJSONMarshal.Create;
+  try
+    j := m.Marshal(self);
+    result := j.ToJSON;
+  finally
+    m.Free;
+  end;
 end;
 
-function TObjectHelper.Close: TObject;
+function TObjectHelper.Clone: TObject;
 begin
-    result := TObject.FromJson(asJson);
+  result := TObject.FromJson(asJson);
 end;
 
-class function TObjectHelper.FromJson(AJson:String) : TObject;
-var m:TJSONUnMarshal;
-    v:TJSONObject;
+class function TObjectHelper.FromJson(AJson: String): TObject;
+var
+  m: TJSONunMarshal;
+  V: TJSONObject;
 begin
-   m:=TJSONUnMarshal.create;
-   try
-      v := TJsonObject.Parse(AJson);
-      result := m.Unmarshal(v);
-   finally
-      m.Free;
-   end;
+  m := TJSONunMarshal.Create;
+  try
+    V := TJSONObject.Parse(AJson);
+    result := m.Unmarshal(V);
+  finally
+    m.Free;
+  end;
+end;
+
+
+procedure TObjectHelper.Queue<T>(Proc: TProc<T>);
+begin
+   TThread.Queue(nil,
+       procedure
+       begin
+             Proc(self);
+       end);
+end;
+
+procedure TObjectHelper.Run<T>(Proc: TProc<T>);
+begin
+   TThread.CreateAnonymousThread(
+           procedure
+              begin
+                 proc(self);
+              end ).Start;
+end;
+
+
+procedure TObjectHelper.Synchronize<T>(Proc: TProc<T>);
+begin
+   TThread.Synchronize(nil,
+   procedure
+   begin
+      proc(self);
+   end);
+end;
+
+procedure TObjectHelper.Anonimous<T>(Proc: TProc<T>);
+begin
+   Proc(self);
 end;
 
 
@@ -492,40 +569,42 @@ var
   fs: TFormatSettings;
 begin
   fs.TimeSeparator := ':';
-  Result := FormatDateTime('hh:nn:ss', ATime, fs);
+  result := FormatDateTime('hh:nn:ss', ATime, fs);
 end;
 
-function ISODateToString(ADate: TDateTime): string;
+function ISODateToString(ADate: TDatetime): string;
 begin
-  Result := FormatDateTime('YYYY-MM-DD', ADate);
+  result := FormatDateTime('YYYY-MM-DD', ADate);
 end;
 
-function ISODateTimeToString(ADateTime: TDateTime): string;
+function ISODateTimeToString(ADateTime: TDatetime): string;
 var
   fs: TFormatSettings;
 begin
   fs.TimeSeparator := ':';
-  Result := FormatDateTime('yyyy-mm-dd hh:nn:ss', ADateTime, fs);
+  result := FormatDateTime('yyyy-mm-dd hh:nn:ss', ADateTime, fs);
 end;
 
-function ISOStrToDateTime(DateTimeAsString: string): TDateTime;
+function ISOStrToDateTime(DateTimeAsString: string): TDatetime;
 begin
-  Result := EncodeDateTime(StrToInt(Copy(DateTimeAsString, 1, 4)),
-    StrToInt(Copy(DateTimeAsString, 6, 2)), StrToInt(Copy(DateTimeAsString, 9, 2)),
-    StrToInt(Copy(DateTimeAsString, 12, 2)), StrToInt(Copy(DateTimeAsString, 15, 2)),
+  result := EncodeDateTime(StrToInt(Copy(DateTimeAsString, 1, 4)),
+    StrToInt(Copy(DateTimeAsString, 6, 2)),
+    StrToInt(Copy(DateTimeAsString, 9, 2)),
+    StrToInt(Copy(DateTimeAsString, 12, 2)),
+    StrToInt(Copy(DateTimeAsString, 15, 2)),
     StrToInt(Copy(DateTimeAsString, 18, 2)), 0);
 end;
 
 function ISOStrToTime(TimeAsString: string): TTime;
 begin
-  Result := EncodeTime(StrToInt(Copy(TimeAsString, 1, 2)), StrToInt(Copy(TimeAsString, 4, 2)),
-    StrToInt(Copy(TimeAsString, 7, 2)), 0);
+  result := EncodeTime(StrToInt(Copy(TimeAsString, 1, 2)),
+    StrToInt(Copy(TimeAsString, 4, 2)), StrToInt(Copy(TimeAsString, 7, 2)), 0);
 end;
 
 function ISOStrToDate(DateAsString: string): TDate;
 begin
-  Result := EncodeDate(StrToInt(Copy(DateAsString, 1, 4)), StrToInt(Copy(DateAsString, 6, 2)),
-    StrToInt(Copy(DateAsString, 9, 2)));
+  result := EncodeDate(StrToInt(Copy(DateAsString, 1, 4)),
+    StrToInt(Copy(DateAsString, 6, 2)), StrToInt(Copy(DateAsString, 9, 2)));
   // , StrToInt
   // (Copy(DateAsString, 12, 2)), StrToInt(Copy(DateAsString, 15, 2)),
   // StrToInt(Copy(DateAsString, 18, 2)), 0);
@@ -542,13 +621,12 @@ end;
 // Result := FormatDateTime('HH:nn:ss', ATime);
 // end;
 
-
 initialization
 
 finalization
 
-{$ifndef MULTI_THREADED}
-JSONFree;
-{$endif}
+{$IFNDEF MULTI_THREADED}
+  JSONFree;
+{$ENDIF}
 
 end.

@@ -8,64 +8,89 @@ uses System.Sysutils, System.Classes, System.JSON, IPPeerClient,
   System.Generics.Collections;
 
 type
-  TCustomSocialBase = class
+  TCustomSocialBase = class(TObject)
   public
-    procedure LoadFromJson(js: TJsonObject); virtual;
     procedure FromJson(aJson: string); virtual;
+    procedure LoadFromJson(js: TJsonObject); virtual;
     procedure LoadFromJsonFile(sFile: string); virtual;
   end;
 
   TCustomSocialAuthBase = class(TCustomSocialBase)
   private
     FAccessToken: string;
-    FClient_Secret: string;
     FClient_ID: string;
+    FClient_Secret: string;
     procedure SetAccessToken(const Value: string);
     procedure SetClient_ID(const Value: string);
     procedure SetClient_Secret(const Value: string);
   public
+    procedure LoadFromJson(js: TJsonObject); override;
+  published
     property AccessToken: string read FAccessToken write SetAccessToken;
     property Client_ID: string read FClient_ID write SetClient_ID;
     property Client_Secret: string read FClient_Secret write SetClient_Secret;
-    procedure LoadFromJson(js: TJsonObject); override;
   end;
 
   TRESTSocialClient = class(TRESTClient)
   private
+    FResource : string;
     FAuth2: TOAuth2Authenticator;
-    RESTResponse1: TRESTResponse;
     RESTRequest1: TRESTRequest;
+    RESTResponse1: TRESTResponse;
+    FResponseText: string;
+    FOnResponseTextChange: TNotifyEvent;
+    function GetAccessToken: string;
     function send(url: string; AResource: string;
       AMethod: TRESTRequestMethod): string;
     procedure SetAccessToken(const Value: string);
-    function GetAccessToken: string;
+    function GetResource: string;
+    procedure SetResource(const Value: string);
+    function GetRequestMethod: TRESTRequestMethod;
+    procedure SetRequestMethod(const Value: TRESTRequestMethod);
+    procedure SetResponseText(const Value: string);
+    procedure SetOnResponseTextChange(const Value: TNotifyEvent);
+  protected
+    function GetAuth2: TOAuth2Authenticator; virtual;
+
   public
-    StatusCode: integer;
-    ResponseText: string;
-    function Response: TRESTResponse;
-    function Request: TRESTRequest;
-    function Auth2: TOAuth2Authenticator;
-    property AccessToken: string read GetAccessToken write SetAccessToken;
-    procedure Clear; virtual;
+    StatusCode: Integer;
     constructor create(ow: TComponent); override;
     destructor destroy; override;
-    function Get(url: string; AResource: string = ''): string; virtual;
+    procedure Clear; virtual;
+    // configuração de acesso ao servidor
+    property ResponseText: string read FResponseText write SetResponseText;
+    function Get(url: string; AResource,AService: string): string; overload; virtual;
+    function Get(AService:String=''): string; overload; virtual;
     function GetStream(AUrl: string; AResource: string; AStream: TStream)
-      : integer; virtual;
+      : Integer; virtual;
+    function Post(url: string; AResource,AService: string): string; overload; virtual;
+    function Post(AService:string): string; overload; virtual;
+    function GetRequest: TRESTRequest; virtual;
+    function GetResponse: TRESTResponse; virtual;
     function SendStream(AUrl, AResource: string; AStream: TStream)
-      : integer; virtual;
-    function Post(url: string; AResource: string = ''): string; virtual;
+      : Integer; virtual;
+    procedure Execute;
+  published
+    property BaseURL;
+    property Resource: string read GetResource write SetResource;
+    property RequestMethod: TRESTRequestMethod read GetRequestMethod
+      write SetRequestMethod;
+    property OnResponseTextChange: TNotifyEvent read FOnResponseTextChange
+      write SetOnResponseTextChange;
+    property Request: TRESTRequest read GetRequest;
+    property Response: TRESTResponse read GetResponse;
+    property AccessToken: string read GetAccessToken write SetAccessToken;
   end;
 
 function Indy_Send_File(ACommand: string;
-  AccessToken, AFileName, ADPFileName: string): integer; overload;
+  AccessToken, AFileName, ADPFileName: string): Integer; overload;
 function Indy_Download_File(AccessToken: string; const exportLinks: string;
-  AStream: System.Classes.TStream; FSSL: boolean): integer;
+  AStream: System.Classes.TStream; FSSL: boolean): Integer;
 
 implementation
 
 function Indy_Download_File(AccessToken: string; const exportLinks: string;
-  AStream: System.Classes.TStream; FSSL: boolean): integer;
+  AStream: System.Classes.TStream; FSSL: boolean): Integer;
 var
   res: String;
   LidHTTP: TIdHttp;
@@ -103,7 +128,7 @@ begin
 end;
 
 function Indy_Send_File_Stream(AccessToken, AUrl: string; AStream: TStream;
-  ASSL: boolean; var AResponseText: string): integer; overload;
+  ASSL: boolean; var AResponseText: string): Integer; overload;
 var
   LidHTTP: TIdHttp;
 begin
@@ -130,7 +155,7 @@ begin
 end;
 
 function Indy_Send_File(ACommand: string;
-  AccessToken, AFileName, ADPFileName: string): integer; overload;
+  AccessToken, AFileName, ADPFileName: string): Integer; overload;
 var
   AStream: TFileStream;
   rsp: string;
@@ -145,6 +170,9 @@ begin
   end;
 end;
 
+{
+  ****************************** TCustomSocialBase *******************************
+}
 procedure TCustomSocialBase.FromJson(aJson: string);
 var
   js: TJsonObject;
@@ -159,6 +187,7 @@ end;
 
 procedure TCustomSocialBase.LoadFromJson(js: TJsonObject);
 begin
+  // abstract;
 end;
 
 procedure TCustomSocialBase.LoadFromJsonFile(sFile: string);
@@ -175,6 +204,9 @@ begin
   end;
 end;
 
+{
+  **************************** TCustomSocialAuthBase *****************************
+}
 procedure TCustomSocialAuthBase.LoadFromJson(js: TJsonObject);
 begin
   inherited;
@@ -201,20 +233,20 @@ end;
 
 { TRESTClientDropBox }
 
-function TRESTSocialClient.Auth2: TOAuth2Authenticator;
-begin
-  result := FAuth2;
-end;
-
+{
+  ****************************** TRESTSocialClient *******************************
+}
 constructor TRESTSocialClient.create(ow: TComponent);
 begin
   inherited;
   FAuth2 := TOAuth2Authenticator.create(self);
 
   RESTResponse1 := TRESTResponse.create(self);
+  RESTResponse1.Name := 'ResponseInternal';
   RESTResponse1.ContentType := 'application/json';
 
   RESTRequest1 := TRESTRequest.create(self);
+  RESTRequest1.Name := 'RequestInternal';
   RESTRequest1.Client := self;
   RESTRequest1.Response := RESTResponse1;
 
@@ -233,48 +265,15 @@ begin
   inherited;
 end;
 
-function TRESTSocialClient.send(url: string; AResource: string;
-  AMethod: TRESTRequestMethod): string;
+procedure TRESTSocialClient.Execute;
 begin
-  RESTRequest1.Method := AMethod;
-  RESTRequest1.Resource := AResource;
-  BaseURL := url;
-  RESTRequest1.Execute;
-  result := RESTResponse1.Content;
-  StatusCode := RESTResponse1.StatusCode;
+   RESTRequest1.Execute;
+   ResponseText := RESTResponse1.Content;
 end;
 
-function TRESTSocialClient.SendStream(AUrl, AResource: string;
-  AStream: TStream): integer;
+function TRESTSocialClient.GetAuth2: TOAuth2Authenticator;
 begin
-  result := Indy_Send_File_Stream(AccessToken, AUrl + AResource, AStream, true,
-    ResponseText);
-end;
-
-procedure TRESTSocialClient.SetAccessToken(const Value: string);
-begin
-  FAuth2.AccessToken := Value;
-end;
-
-function TRESTSocialClient.Get(url: string; AResource: string = ''): string;
-begin
-  result := send(url, AResource, TRESTRequestMethod.rmGET);
-end;
-
-function TRESTSocialClient.GetAccessToken: string;
-begin
-  result := FAuth2.AccessToken;
-end;
-
-function TRESTSocialClient.GetStream(AUrl, AResource: string;
-  AStream: TStream): integer;
-begin
-  result := Indy_Download_File(AccessToken, AUrl + AResource, AStream, true);
-end;
-
-function TRESTSocialClient.Post(url: string; AResource: string = ''): string;
-begin
-  result := send(url, AResource, TRESTRequestMethod.rmPost);
+  result := FAuth2;
 end;
 
 procedure TRESTSocialClient.Clear;
@@ -283,14 +282,107 @@ begin
   RESTRequest1.SynchronizedEvents := false;
 end;
 
-function TRESTSocialClient.Request: TRESTRequest;
+function TRESTSocialClient.Get(url: string; AResource,AService: string): string;
+begin
+  result := send(url, AResource+AService, TRESTRequestMethod.rmGET);
+
+end;
+
+function TRESTSocialClient.Get(AService:String=''): string;
+begin
+  result := Get(BaseURL, Resource, AService);
+end;
+
+function TRESTSocialClient.GetAccessToken: string;
+begin
+  result := FAuth2.AccessToken;
+end;
+
+function TRESTSocialClient.GetRequestMethod: TRESTRequestMethod;
+begin
+  result := RESTRequest1.Method;
+end;
+
+function TRESTSocialClient.GetResource: string;
+begin
+  result := FResource;
+end;
+
+function TRESTSocialClient.GetStream(AUrl: string; AResource: string;
+  AStream: TStream): Integer;
+begin
+  result := Indy_Download_File(AccessToken, AUrl + AResource, AStream, true);
+end;
+
+function TRESTSocialClient.Post(AService:string): string;
+begin
+  result := Post(BaseURL, Resource, AService);
+end;
+
+function TRESTSocialClient.Post(url: string; AResource,AService: string): string;
+begin
+  result := send(url, AResource, TRESTRequestMethod.rmPost);
+end;
+
+function TRESTSocialClient.GetRequest: TRESTRequest;
 begin
   result := RESTRequest1;
 end;
 
-function TRESTSocialClient.Response: TRESTResponse;
+function TRESTSocialClient.GetResponse: TRESTResponse;
 begin
   result := RESTResponse1;
 end;
+
+function TRESTSocialClient.send(url: string; AResource: string;
+  AMethod: TRESTRequestMethod): string;
+begin
+  RESTRequest1.Method := AMethod;
+  RESTRequest1.Resource := AResource;
+  BaseURL := url;
+  RESTRequest1.Execute;
+  ResponseText := RESTResponse1.Content;
+  result := ResponseText;
+  StatusCode := RESTResponse1.StatusCode;
+end;
+
+function TRESTSocialClient.SendStream(AUrl, AResource: string;
+  AStream: TStream): Integer;
+var
+  rst: String;
+begin
+  result := Indy_Send_File_Stream(AccessToken, AUrl + AResource, AStream,
+    true, rst);
+  ResponseText := rst;
+end;
+
+procedure TRESTSocialClient.SetAccessToken(const Value: string);
+begin
+  FAuth2.AccessToken := Value;
+end;
+
+procedure TRESTSocialClient.SetOnResponseTextChange(const Value: TNotifyEvent);
+begin
+  FOnResponseTextChange := Value;
+end;
+
+procedure TRESTSocialClient.SetRequestMethod(const Value: TRESTRequestMethod);
+begin
+  RESTRequest1.Method := Value;
+end;
+
+procedure TRESTSocialClient.SetResource(const Value: string);
+begin
+  FResource := Value;
+  RESTRequest1.Resource := Value;
+end;
+
+procedure TRESTSocialClient.SetResponseText(const Value: string);
+begin
+  FResponseText := Value;
+  if assigned(FOnResponseTextChange) then
+    FOnResponseTextChange(self);
+end;
+
 
 end.

@@ -29,6 +29,7 @@ interface
 uses System.Sysutils, System.Classes, System.JSON, IPPeerClient,
   REST.Client, REST.Authenticator.OAuth, REST.Response.Adapter,
   REST.types, idHTTP, IdSSL, IdSSLOpenSSL, REST.Social, REST.FDSocial,
+  REST.JSON,
   System.Generics.Collections, FireDAC.Stan.Intf,
   FireDAC.Stan.Option, FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS,
   FireDAC.Phys.Intf, FireDAC.DApt.Intf, Data.DB, FireDAC.Comp.DataSet,
@@ -36,23 +37,26 @@ uses System.Sysutils, System.Classes, System.JSON, IPPeerClient,
 
 type
 
-
-  TDropboxAppInfo = record
+  {TDropboxAppInfo = record
   public
-  end;
+  end;}
 
-
-
-
-  TDropboxAccountInfo = Record
-    email: string;
-    display_name: string;
-    uid: string;
+  TDropboxAccountInfo = class(TPersistent)
   private
     JSON: string;
+    Femail: string;
+    Fuid: string;
+    Fdisplay_name: string;
+    procedure Setdisplay_name(const Value: string);
+    procedure Setemail(const Value: string);
+    procedure Setuid(const Value: string);
   public
     procedure FromJson(aJson: string);
     procedure LoadFromJson(js: TJsonObject);
+  published
+    property email: string read Femail write Setemail;
+    property display_name: string read Fdisplay_name write Setdisplay_name;
+    property uid: string read Fuid write Setuid;
   end;
 
   TDropboxListFolderItem = class
@@ -103,7 +107,7 @@ type
     procedure FromJson(aJson: String);
   end;
 
-  TDropbox = class(TComponent)
+  TSocialDropbox = class(TComponent)
   private
     FStatusCode: integer;
     FDataset: TDataset;
@@ -114,13 +118,15 @@ type
     procedure SetAuthBase(const Value: TCustomSocialAuthBase);
     procedure SetListFolder(const Value: TDropboxListFolderList);
     procedure SetAccountInfo(const Value: TDropboxAccountInfo);
+    procedure SetAccessToken(const Value: string);
+    function GetAccessToken: string;
   protected
     procedure prepare;
   public
-    Command: string;
+    //Command: string;
     Response: string;
     function DataSet: TDataset;
-    constructor create(ow: TComponent);
+    constructor create(ow: TComponent);override;
     destructor destroy; override;
 
     function StatusCode: integer;
@@ -138,17 +144,18 @@ type
       write SetAccountInfo;
 
   published
-    property AuthBase: TCustomSocialAuthBase read FAuthBase write SetAuthBase;
+     property AuthBase: TCustomSocialAuthBase read FAuthBase write SetAuthBase;
+    // property RestClient: TRESTSocialClientDataset read FRestClient write FRestClient;
+    property AccessToken: string  read GetAccessToken write SetAccessToken;
+
   end;
 
-
-
-
+procedure Register;
 
 implementation
 
 { TDropbox }
-Uses {System.uJson,} Data.DB.Helper;
+// Uses Data.DB.Helper;
 
 const
   authServer = 'https://www.dropbox.com';
@@ -162,7 +169,8 @@ const
   url_accountInfo = apiServer + '/1/account/info';
   url_getFile = fileServer + '/1/files/auto';
   url_postFile = fileServer + '/1/files/auto';
-  url_putFile = fileServer + '/1/files_put/auto';  ///auto
+  url_putFile = fileServer + '/1/files_put/auto';
+  /// auto
   url_metadata = apiServer + '/1/metadata/auto';
   url_delta = apiServer + '/1/delta';
   url_revisions = apiServer + '/1/revisions/auto/';
@@ -180,97 +188,43 @@ const
   url_fileopsMove = apiServer + '/1/fileops/move';
   url_list_Folder = apiServer + '/2/files/list_folder/';
 
+procedure Register;
+begin
+  RegisterClass(TDropboxAccountInfo);
+  RegisterComponents('REST Client', [TSocialDropbox]);
+end;
 
-
-
-(*
-
-  procedure XUploadFile(LocalPath, RemotePath: string);
-  const
-  URL = 'https://api-content.dropbox.com/1/files/%s/%s';
-  var
-  OAuthRequest: TOAuthRequest;
-  HMAC: TOAuthSignatureMethod;
-  var
-  FileStream: TFileStream;
-  Ts: TStringList;
-  begin
-  FileStream := TFileStream.Create(LocalPath, fmOpenRead or fmShareDenyNone);
-  try
-  if RemotePath[1] = '/' then
-  Delete(RemotePath, 1, 1);
-
-  OAuthRequest := TOAuthRequest.Create('');
-  HMAC := TYourOAuthSignatureMethod_HMAC_SHA1.Create;
-  try
-  { TODO -oYou : OAuthRequest does not have a way to set the HTTP method being used.
-  It should support this. You will need to add it. }
-  OAuthRequest.HTTPURL := Format(URL, [FRoot, URLEncodeRemotePath(RemotePath)]);
-  OAuthRequest.FromConsumerAndToken(FOAuthConsumer, FOAuthToken, '');
-  OAuthRequest.Sign_Request(HMAC, FOAuthConsumer, FOAuthToken);
-
-  { TODO -oYou : This will likely fail! I will let you figure out why. :-) OAuth.pas does not
-  generate the request string properly for this call if memory serves me correctly.
-  I have provided some very basic exception handling that will write the error message
-  to C:\DropboxErrorMessage.txt. Look at that message. It will tell you what the problem
-  is!
-
-  This will fail for the reason above, but also because OAuth.pas only supports HTTP GET
-  method, not PUT which is required here. How do you resolve this? }
-  try
-  FHTTP.Put(OAuthRequest.HTTPURL + '?' + OAuthRequest.GetString, FileStream);
-  except
-  on E: EIdHTTPProtocolException do
-  begin
-  Ts := TStringList.Create;
-  try
-  Ts.Text := E.ErrorMessage;
-  Ts.SaveToFile('C:\DropboxErrorMessage.txt');
-  finally
-  Ts.Free;
-  end;
-  end;
-  end;
-  finally
-  HMAC.Free;
-  OAuthRequest.Free;
-  end;
-  finally
-  FileStream.Free;
-  end;
-  end;
-*)
-
-
-constructor TDropbox.create(ow: TComponent);
+constructor TSocialDropbox.create(ow: TComponent);
 begin
   inherited create(ow);
+  FAccountInfo := TDropboxAccountInfo.create;
   FAuthBase := TCustomSocialAuthBase.create;
   FRestClient := TRESTSocialClientDataset.create(self);
+  FRestClient.Name := 'RestClientInternal';
   FListFolder := TDropboxListFolderList.create; // (true);
 end;
 
-function TDropbox.DataSet: TDataset;
+function TSocialDropbox.DataSet: TDataset;
 begin
   result := FDataset;
 end;
 
-destructor TDropbox.destroy;
+destructor TSocialDropbox.destroy;
 begin
   FAuthBase.Free;
   FRestClient.Free;
   FListFolder.Free;
+  FAccountInfo.Free;
   inherited;
 end;
 
-procedure TDropbox.DownloadFile(file_path: string; AStream: TStream);
+procedure TSocialDropbox.DownloadFile(file_path: string; AStream: TStream);
 begin
-  Command := url_getFile + file_path;
   prepare;
-  FStatusCode := FRestClient.GetStream(Command, '', AStream);
+  FStatusCode := FRestClient.GetStream(url_getFile, file_path, AStream);
 end;
 
-procedure TDropbox.DownloadFile(file_path: string; saveToPath: string);
+procedure TSocialDropbox.DownloadFile(file_path: string; saveToPath: string);
 var
   AStream: TMemoryStream;
   rsp: boolean;
@@ -287,78 +241,89 @@ begin
   end;
 end;
 
-function TDropbox.GetAccountInfo: TDropboxAccountInfo;
+function TSocialDropbox.GetAccessToken: string;
+begin
+  result := AuthBase.AccessToken;
+end;
+
+function TSocialDropbox.GetAccountInfo: TDropboxAccountInfo;
 var
   sJson: string;
 begin
   prepare;
-  Command := url_accountInfo;
-  Response := FRestClient.Get(Command);
+  FRestClient.BaseURL := url_accountInfo;
+  Response := FRestClient.Get();
   FStatusCode := FRestClient.StatusCode;
   if StatusCode = 200 then
     FAccountInfo.FromJson(Response);
   result := FAccountInfo;
 end;
 
-function TDropbox.GetListFolder(APath: string;
+function TSocialDropbox.GetListFolder(APath: string;
   AContinue: boolean = false): boolean;
+var FCommand:string;
 begin
   prepare;
-  Command := url_metadata + APath + '?list';
-  Response := FRestClient.Get(Command);
+  FRestClient.BaseURL := url_metadata;
+  FRestClient.Resource := APath + '?list';
+  Response := FRestClient.Get();
   FStatusCode := FRestClient.StatusCode;
   if StatusCode = 200 then
   begin
     FRestClient.RootElement := 'contents';
-    Response := FRestClient.DataSet.ToJson;
+    Response := TJson.ObjectToJsonString(FRestClient.DataSet); // .ToJson;
     FListFolder.FromJson(Response);
   end;
 end;
 
-procedure TDropbox.prepare;
+procedure TSocialDropbox.prepare;
 begin
   FRestClient.Clear;
-  FRestClient.Auth2.AccessToken := FAuthBase.AccessToken;
+  FRestClient.AccessToken := FAuthBase.AccessToken;
 end;
 
-procedure TDropbox.SetAccountInfo(const Value: TDropboxAccountInfo);
+procedure TSocialDropbox.SetAccessToken(const Value: string);
+begin
+  FRestClient.AccessToken := value;
+  AuthBase.AccessToken := value;
+end;
+
+procedure TSocialDropbox.SetAccountInfo(const Value: TDropboxAccountInfo);
 begin
   FAccountInfo := Value;
 end;
 
-procedure TDropbox.SetAuthBase(const Value: TCustomSocialAuthBase);
+procedure TSocialDropbox.SetAuthBase(const Value: TCustomSocialAuthBase);
 begin
   FAuthBase := Value;
 end;
 
-procedure TDropbox.SetListFolder(const Value: TDropboxListFolderList);
+procedure TSocialDropbox.SetListFolder(const Value: TDropboxListFolderList);
 begin
   FListFolder := Value;
 end;
 
-function TDropbox.StatusCode: integer;
+function TSocialDropbox.StatusCode: integer;
 begin
   result := FStatusCode;
 end;
 
-procedure TDropbox.UploadFile(AFileName: string; AFile_To: String);
+procedure TSocialDropbox.UploadFile(AFileName: string; AFile_To: String);
 var
-  AStream:TFileStream;
+  AStream: TFileStream;
+  FCommand:string;
 begin
   prepare;
-  Command := url_putFile + AFile_To;
-  AStream :=TFileStream.Create(AFileName,fmOpenRead);
+  FCommand := url_putFile + AFile_To;
+  AStream := TFileStream.create(AFileName, fmOpenRead);
   try
-    FStatusCode := FRestClient.SendStream(Command,'', AStream);
+    FStatusCode := FRestClient.SendStream(FCommand, '', AStream);
   finally
     AStream.Free;
   end;
 end;
 
-
-
 { TDropboxConfig }
-
 
 { TDropboxAuthBase }
 
@@ -368,7 +333,7 @@ procedure TDropboxAccountInfo.FromJson(aJson: string);
 var
   js: TJsonObject;
 begin
-  js := TJsonObject.ParseJSONValue(aJson) as TJSONObject;
+  js := TJsonObject.ParseJSONValue(aJson) as TJsonObject;
   try
     LoadFromJson(js);
   finally
@@ -379,10 +344,25 @@ end;
 procedure TDropboxAccountInfo.LoadFromJson(js: TJsonObject);
 begin
   inherited;
-  JSON := js.ToJson;
-  js.TryGetValue<string>('email', email);
-  js.TryGetValue<string>('display_name', display_name);
-  js.TryGetValue<string>('uid', uid);
+  JSON := js.ToString;
+  js.TryGetValue<string>('email', Femail);
+  js.TryGetValue<string>('display_name', Fdisplay_name);
+  js.TryGetValue<string>('uid', Fuid);
+end;
+
+procedure TDropboxAccountInfo.Setdisplay_name(const Value: string);
+begin
+  Fdisplay_name := Value;
+end;
+
+procedure TDropboxAccountInfo.Setemail(const Value: string);
+begin
+  Femail := Value;
+end;
+
+procedure TDropboxAccountInfo.Setuid(const Value: string);
+begin
+  Fuid := Value;
 end;
 
 { TDropboxListFolderList }
@@ -474,6 +454,5 @@ procedure TDropboxListFolderItem.Setthumb_exists(const Value: string);
 begin
   Fthumb_exists := Value;
 end;
-
 
 end.

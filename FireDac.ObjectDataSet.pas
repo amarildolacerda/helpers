@@ -27,23 +27,24 @@ unit FireDac.ObjectDataSet;
 interface
 
 uses System.Classes, System.Rtti, Data.DB,
+  System.Generics.Collections, System.TypInfo,
   FireDac.Stan.Intf, FireDac.Stan.Option,
   FireDac.Stan.Param, FireDac.Stan.Error, FireDac.DatS, FireDac.Phys.Intf,
   FireDac.DApt.Intf, FireDac.Comp.DataSet, FireDac.Comp.Client,
-  System.SysUtils, System.Generics.Collections, System.Contnrs;
+  System.SysUtils,  System.Contnrs;
 
 type
 
-  TJvObjectListEvent = procedure(sender: TObject; Action: TListNotification)
+  TObjectListEvent = procedure(sender: TObject; Action: TListNotification)
     of object;
 
   TObjectListEventing = class(TObjectList)
   private
-    FOnAddEvent: TJvObjectListEvent;
-    procedure SetOnAddEvent(const Value: TJvObjectListEvent);
+    FOnAddEvent: TObjectListEvent;
+    procedure SetOnAddEvent(const Value: TObjectListEvent);
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
-    property OnNotifyEvent: TJvObjectListEvent read FOnAddEvent
+    property OnNotifyEvent: TObjectListEvent read FOnAddEvent
       write SetOnAddEvent;
   end;
 
@@ -91,8 +92,8 @@ type
     procedure EnableListControls;
     procedure Reopen;
   published
-    procedure LoadFromList( AList:TList );
-    procedure SaveToList( AList:TList );
+    procedure LoadFromList( AList:TList );overload;virtual;
+    procedure SaveToList( AList:TList );overload;virtual;
     property ObjectClass: TClass read FObjectClass write SetObjectClass;
     property ObjectList: TObjectListEventing read FObjectList
       write SetObjectList;
@@ -102,6 +103,20 @@ type
     property StringWidth: integer read FStringMax write SetStringMax;
 
   end;
+
+
+  TGenericObjectDataset<T: Class> = class(TObjectDataset)
+  private
+    function GetItems(idx: Integer): T;
+    procedure SetItems(idx: Integer; const Value: T);
+    public
+      constructor create(AOwner:TComponent);override;
+      procedure LoadFromList( AList:TList<T> );overload;
+      procedure SaveToList( AList:TList<T> );overload;
+      function Count:integer;
+      property Items[idx:Integer]:T  read GetItems write SetItems;
+  end;
+
 
 implementation
 
@@ -484,9 +499,88 @@ begin
     FOnAddEvent(self, Action);
 end;
 
-procedure TObjectListEventing.SetOnAddEvent(const Value: TJvObjectListEvent);
+procedure TObjectListEventing.SetOnAddEvent(const Value: TObjectListEvent);
 begin
   FOnAddEvent := Value;
+end;
+
+{ TGenericObjectDataset<T> }
+
+function TGenericObjectDataset<T>.Count: integer;
+begin
+   result := FObjectList.Count;
+end;
+
+
+constructor TGenericObjectDataset<T>.create(AOwner: TComponent);
+begin
+  inherited;
+  ObjectClass := T;
+end;
+
+function TGenericObjectDataset<T>.GetItems(idx: Integer): T;
+var LVal:TValue;
+    obj:TObject;
+    ct:TClass;
+begin
+   obj := FObjectList.Items[idx];
+   result := T(obj);
+end;
+
+procedure TGenericObjectDataset<T>.LoadFromList(AList: TList<T>);
+  var obj:TObject;
+      nObj:TObject;
+      i:integer;
+begin
+   if AList.Count=0 then exit;  // nao tem nada para ler
+   try
+   try
+   if active then
+      EmptyDataSet;
+   close;
+   FieldDefs.Clear;
+   obj := AList.Items[0];
+   ObjectClass := obj.ClassType;
+   open;
+   for I := 0 to AList.Count-1 do
+     begin
+       obj := AList.Items[i];
+       append;
+       ObjectToField(obj);
+       Post;
+     end;
+   finally
+   end;
+   finally
+      Resync([]);
+   end;
+end;
+
+procedure TGenericObjectDataset<T>.SaveToList(AList: TList<T>);
+var obj:TObject;
+    oldRow:Integer;
+begin
+    AList.clear;
+    oldRow := GetRecNo;
+    DisableControls;
+    try
+    first;
+    while eof=false do
+    begin
+      obj := FObjectClass.Create;
+      FieldToObject(obj);
+      AList.Add(obj);
+      next;
+    end;
+    finally
+      SetRecNo(oldRow);
+      EnableControls;
+    end;
+end;
+
+procedure TGenericObjectDataset<T>.SetItems(idx: Integer; const Value: T);
+begin
+    FObjectList.SetItem(idx,Value);
 end;
 
 end.

@@ -48,7 +48,8 @@ type
     procedure Append(AEvent: TProc); overload;
     procedure Post(AEvent: TProc); overload;
     procedure Post(AEvent: TProc<TDataset>); overload;
-    function ToJson(): String;
+    function ToJson(AAlias:string=''): String;
+    function ToJsonObject(AAlias:string):TJsonObject;
     procedure ChangeAllValuesTo(AFieldName: string; AValue: Variant); overload;
     procedure ChangeAllValuesTo(AFieldName: string; AValue: Variant;
       AConfirm: TFunc<boolean>); overload;
@@ -379,7 +380,12 @@ begin
   Post;
 end;
 
-function TDatasetHelper.ToJson: String;
+function TDatasetHelper.ToJson(AAlias:string=''): String;
+begin
+  result := ToJsonObject(AAlias).ToJSON;
+end;
+
+function TDatasetHelper.ToJsonObject(AAlias:string):TJsonObject;
 var
   book: TBookMark;
   //lst: TStringList; //
@@ -387,15 +393,16 @@ var
   LRow:TJsonObject;
   n:integer;
 begin
-  result := '[]';
   book := GetBookmark;
   try
     //lst := TStringList.Create;
+    result := TJSONObject.Create;
     LJson:=TJsonArray.create;
     try
       //lst.Delimiter := ',';
       DisableControls;
       n:=0;
+      first;
       while eof = false do
       begin
         inc(n);
@@ -408,10 +415,14 @@ begin
         next;
       end;
       //result := '[' + lst.DelimitedText + ']';
-      result := LJson.ToJSON;
+      //result := LJson.ToJSON;
+      if AAlias='' then
+         result := TJsonObject( LJson )
+      else
+         result.addPair(aAlias,LJson);
     finally
       //lst.Free;
-      LJson.Free;
+      //LJson.Free;
     end;
   finally
     EnableControls;
