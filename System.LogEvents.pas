@@ -77,6 +77,8 @@ type
     procedure unregister(sender: TObject);
     procedure DoErro(sender: TObject; identific: Integer; s: string;
       nInteracoes: Integer = 1);
+    procedure DoMsg(sender: TObject; identific: Integer; s: string;
+      nInteracoes: Integer = 1);
     procedure DoProgress(sender: TObject; identific: Integer;
       ATipo: TLogEventType; msg: string; APosition: double = 0;
       nInteracoes: Integer = 1);
@@ -129,6 +131,12 @@ end;
 
 procedure TLogListItems.DoErro(sender: TObject; identific: Integer; s: string;
   nInteracoes: Integer = 1);
+begin   // compatibilidade
+  DoMsg(sender,Identific,s,nInteracoes);
+end;
+
+procedure TLogListItems.DoMsg(sender: TObject; identific: Integer;
+  s: string; nInteracoes: Integer);
 var
   it: TLogListItem;
   i, x: Integer;
