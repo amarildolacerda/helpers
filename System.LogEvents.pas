@@ -29,15 +29,9 @@ interface
 
 Uses {$IFDEF FMX} FMX.Forms, {$ELSE} VCL.Forms, {$ENDIF} System.Classes,
   System.Generics.Collections, System.SysUtils,
-  System.SyncObjs;
+  System.SyncObjs, System.LogEvents.Progress;
 
 type
-  TLogEventType = (etCreating, etWaiting, etStarting, etWorking, etFinished,
-    etAllFinished);
-
-  TLogListEvent = procedure(sender: TObject; msg: string) of object;
-  TLogProgressEvent = procedure(sender: TObject; ATipo: TLogEventType;
-    msg: string; APosition: double) of object;
 
   TLogListItem = class
   private
@@ -82,6 +76,7 @@ type
     procedure DoProgress(sender: TObject; identific: Integer;
       ATipo: TLogEventType; msg: string; APosition: double = 0;
       nInteracoes: Integer = 1);
+    procedure SetMax(FValue:Integer);
     procedure Log(texto: string);
     constructor create();
     destructor Destroy; override;
@@ -201,7 +196,6 @@ var
   it: TLogListItem;
   i, x: Integer;
 begin
-
   TThread.CreateAnonymousThread(
     procedure
     begin
@@ -296,6 +290,11 @@ end;
 procedure TLogListItems.SetEnabled(const Value: boolean);
 begin
   FEnabled := Value;
+end;
+
+procedure TLogListItems.SetMax(FValue: Integer);
+begin
+
 end;
 
 procedure TLogListItems.SetMostraDataHora(const Value: boolean);

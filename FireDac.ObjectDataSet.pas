@@ -519,9 +519,8 @@ begin
 end;
 
 function TGenericObjectDataset<T>.GetItems(idx: Integer): T;
-var LVal:TValue;
+var
     obj:TObject;
-    ct:TClass;
 begin
    obj := FObjectList.Items[idx];
    result := T(obj);
