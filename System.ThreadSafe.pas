@@ -57,6 +57,10 @@ type
     procedure SetCommaText(const AValue: string);
     function GetQuoteChar: Char;
     procedure SetQuoteChar(const AValue: Char);
+    function GetValues(AName: string): String;
+    procedure SetValues(AName: string; const Value: String);
+    function GetNames(AIndex: integer): String;
+    procedure SetNames(AIndex: integer; const Value: String);
   public
     constructor create; override;
     destructor destroy; override;
@@ -69,7 +73,7 @@ type
     procedure Remove(AText: string);
     function LockList: TStringList;
     procedure UnlockList; inline;
-    property items[AIndex: integer]: string read Getitems write Setitems;
+    property Items[AIndex: integer]: string read Getitems write Setitems;
     property Delimiter: Char read GetDelimiter write SetDelimiter;
     property DelimitedText: string read GetDelimitedText write SetDelimitedText;
     function Text: string;
@@ -78,6 +82,8 @@ type
     procedure Assing(AStrings: TStrings);
     procedure AssingTo(AStrings: TStrings);
     procedure AddTo(AStrings: TStrings);
+    property Values[AName: string]: String read GetValues write SetValues;
+    property Names[AIndex: integer]: String read GetNames write SetNames;
   end;
 
   TThreadSafeObjectList<T: Class> = class(TObjectLock)
@@ -198,6 +204,16 @@ begin
   end;
 end;
 
+function TThreadSafeStringList.GetNames(AIndex: integer): String;
+begin
+  with LockList do
+    try
+      result := Names[AIndex];
+    finally
+      UnlockList;
+    end;
+end;
+
 procedure TThreadSafeStringList.Setitems(AIndex: integer; const AValue: string);
 begin
   try
@@ -205,6 +221,16 @@ begin
   finally
     UnlockList;
   end;
+end;
+
+procedure TThreadSafeStringList.SetNames(AIndex: integer; const Value: String);
+begin
+  with LockList do
+    try
+      Names[AIndex] := Value;
+    finally
+      UnlockList;
+    end;
 end;
 
 function TThreadSafeStringList.Text: string;
@@ -294,6 +320,16 @@ begin
 
 end;
 
+function TThreadSafeStringList.GetValues(AName: string): String;
+begin
+  with LockList do
+    try
+      result := Values[AName];
+    finally
+      UnlockList;
+    end;
+end;
+
 function TThreadSafeStringList.IndexOf(AText: string): integer;
 begin
   with LockList do
@@ -320,6 +356,16 @@ begin
   finally
     UnlockList;
   end;
+end;
+
+procedure TThreadSafeStringList.SetValues(AName: string; const Value: String);
+begin
+  with LockList do
+    try
+      Values[AName] := Value;
+    finally
+      UnlockList;
+    end;
 end;
 
 procedure TThreadSafeStringList.AddTo(AStrings: TStrings);
