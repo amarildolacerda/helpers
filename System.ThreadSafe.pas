@@ -102,7 +102,7 @@ type
     procedure Clear;
     function Add(AValue: T): integer; overload;
     function Count: integer;
-    property items[AIndex: integer]: T read Getitems write Setitems;
+    property Items[AIndex: integer]: T read Getitems write Setitems;
     function IndexOf(AValue: T): integer;
     procedure Delete(AIndex: integer);
     procedure Remove(AValue: T);
@@ -126,7 +126,7 @@ type
     procedure Clear;
     function LockList: TList<T>;
     procedure UnlockList;
-    property items[AIndex: integer]: T read Getitems write Setitems;
+    property Items[AIndex: integer]: T read Getitems write Setitems;
   end;
 
 implementation
@@ -224,13 +224,16 @@ begin
 end;
 
 procedure TThreadSafeStringList.SetNames(AIndex: integer; const Value: String);
+var
+  sValue: String;
 begin
-  with LockList do
-    try
-      Names[AIndex] := Value;
-    finally
-      UnlockList;
-    end;
+  Lock;
+  try
+    sValue := FList.ValueFromIndex[AIndex];
+    FList[AIndex] := Value + '=' + sValue;
+  finally
+    UnLock;
+  end;
 end;
 
 function TThreadSafeStringList.Text: string;
@@ -499,7 +502,7 @@ function TThreadSafeObjectList<T>.Getitems(AIndex: integer): T;
 begin
   with LockList do
     try
-      result := FList.items[AIndex];
+      result := FList.Items[AIndex];
     finally
       UnlockList;
     end;
@@ -534,7 +537,7 @@ procedure TThreadSafeObjectList<T>.Setitems(AIndex: integer; const AValue: T);
 begin
   with LockList do
     try
-      FList.items[AIndex] := AValue;
+      FList.Items[AIndex] := AValue;
     finally
       UnlockList;
     end;
@@ -569,7 +572,7 @@ begin
       try
         for i := Count - 1 downto 0 do
         begin
-          ob := items[i];
+          ob := Items[i];
           Delete(i);
           if FOwned then
             ob := nil;
@@ -606,7 +609,7 @@ var
 begin
   Lock;
   try
-    ob := FList.items[AIndex];
+    ob := FList.Items[AIndex];
     FList.Delete(AIndex);
     if FOwned then
       ob := nil;
@@ -619,7 +622,7 @@ function TThreadSafeInterfaceList<T>.Getitems(AIndex: integer): T;
 begin
   with LockList do
     try
-      result := T(items[AIndex]);
+      result := T(Items[AIndex]);
     finally
       UnlockList;
     end;
@@ -645,7 +648,7 @@ procedure TThreadSafeInterfaceList<T>.Setitems(AIndex: integer;
 begin
   with LockList do
     try
-      FList.items[AIndex] := T;
+      FList.Items[AIndex] := T;
     finally
       UnlockList;
     end;
@@ -667,7 +670,7 @@ begin
   try
     for i := 0 to FList.Count - 1 do
     begin
-      ob1 := FList.items[i] as TObject;
+      ob1 := FList.Items[i] as TObject;
       if ob1.Equals(ob2) then
       begin
         result := i;
