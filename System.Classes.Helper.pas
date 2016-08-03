@@ -1,26 +1,26 @@
-{***************************************************************************}
-{                                                                           }
-{                                                                           }
-{           Copyright (C) Amarildo Lacerda                                  }
-{                                                                           }
-{           https://github.com/amarildolacerda                              }
-{                                                                           }
-{                                                                           }
-{***************************************************************************}
-{                                                                           }
-{  Licensed under the Apache License, Version 2.0 (the "License");          }
-{  you may not use this file except in compliance with the License.         }
-{  You may obtain a copy of the License at                                  }
-{                                                                           }
-{      http://www.apache.org/licenses/LICENSE-2.0                           }
-{                                                                           }
-{  Unless required by applicable law or agreed to in writing, software      }
-{  distributed under the License is distributed on an "AS IS" BASIS,        }
-{  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. }
-{  See the License for the specific language governing permissions and      }
-{  limitations under the License.                                           }
-{                                                                           }
-{***************************************************************************}
+{ *************************************************************************** }
+{ }
+{ }
+{ Copyright (C) Amarildo Lacerda }
+{ }
+{ https://github.com/amarildolacerda }
+{ }
+{ }
+{ *************************************************************************** }
+{ }
+{ Licensed under the Apache License, Version 2.0 (the "License"); }
+{ you may not use this file except in compliance with the License. }
+{ You may obtain a copy of the License at }
+{ }
+{ http://www.apache.org/licenses/LICENSE-2.0 }
+{ }
+{ Unless required by applicable law or agreed to in writing, software }
+{ distributed under the License is distributed on an "AS IS" BASIS, }
+{ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. }
+{ See the License for the specific language governing permissions and }
+{ limitations under the License. }
+{ }
+{ *************************************************************************** }
 unit System.Classes.Helper;
 
 interface
@@ -74,11 +74,13 @@ Type
     property Properties[AName: string]: TValue read GetProperties
       write SetProperties;
     procedure GetPropertiesList(AList: TStrings;
-      AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
+      const AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
     property Fields[AName: string]: TValue read GetFields write SetFields;
     procedure GetFieldsList(AList: TStrings;
-      AVisibility: TMemberVisibilitySet = [mvPublic]);
+      const AVisibility: TMemberVisibilitySet = [mvPublic]);
     property Methods[AName: String]: TRttiMethod read GetMethods;
+    procedure GetMethodsList(AList: TStrings;
+      const AVisibility: TMemberVisibilitySet = [mvPublic]);
     function HasAttribute(aMethod: TRttiMethod;
       attribClass: TCustomAttributeClass): Boolean;
     function InvokeAttribute(attribClass: TCustomAttributeClass;
@@ -155,7 +157,7 @@ begin
 end;
 
 procedure TObjectHelper.GetFieldsList(AList: TStrings;
-AVisibility: TMemberVisibilitySet = [mvPublic]);
+const AVisibility: TMemberVisibilitySet = [mvPublic]);
 var
   ACtx: TRttiContext;
   AFld: TRttiField;
@@ -185,6 +187,25 @@ begin
   end;
 end;
 
+procedure TObjectHelper.GetMethodsList(AList: TStrings;
+const AVisibility: TMemberVisibilitySet = [mvPublic]);
+var
+  aMethod: TRttiMethod;
+  ACtx: TRttiContext;
+begin
+  AList.clear;
+  ACtx := TRttiContext.create;
+  try
+    for aMethod in ACtx.GetType(self.ClassType).GetMethods do
+    begin
+      if aMethod.Visibility in AVisibility then
+        AList.Add(aMethod.Name);
+    end;
+  finally
+    ACtx.Free;
+  end;
+end;
+
 function TObjectHelper.GetProperties(AName: string): TValue;
 var
   ACtx: TRttiContext;
@@ -202,7 +223,7 @@ begin
 end;
 
 procedure TObjectHelper.GetPropertiesList(AList: TStrings;
-AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
+const AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
 var
   ACtx: TRttiContext;
   aProperty: TRttiProperty;
@@ -271,7 +292,6 @@ begin
   try
     aMethod.Invoke(self, params);
   finally
-    //aMethod.DisposeOf;
   end;
 end;
 
