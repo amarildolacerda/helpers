@@ -47,9 +47,9 @@ Type
     class procedure Synchronize(Proc: TProc); overload; static;
 
     // RTTI
-    function RttiType: TRttiType;
     property Properties[AName: string]: TValue read GetProperties
       write SetProperties;
+    procedure GetPropertiesList(AList: TStrings);
     property Fields[AName: string]: TValue read GetFields write SetFields;
     property Methods[AName: String]: TRttiMethod read GetMethods;
     function HasAttribute(aMethod: TRttiMethod;
@@ -113,23 +113,67 @@ end;
 
 function TObjectHelper.GetFields(AName: string): TValue;
 var
+  ACtx: TRttiContext;
   AField: TRttiField;
 begin
-  AField := RttiType.GetField(AName);
-  result := AField.GetValue(self);
+  result := nil;
+  ACtx := TRttiContext.create;
+  try
+    AField := ACtx.GetType(self.ClassType).GetField(AName);
+    if assigned(AField) then
+      result := AField.GetValue(self);
+  finally
+    ACtx.Free;
+  end;
 end;
 
 function TObjectHelper.GetMethods(AName: String): TRttiMethod;
+var
+  ACtx: TRttiContext;
 begin
-  result := RttiType.GetMethod(AName);
+  ACtx := TRttiContext.create;
+  try
+    result := ACtx.GetType(self.ClassType).GetMethod(AName);
+  finally
+    // ACtx.Free;
+  end;
 end;
 
 function TObjectHelper.GetProperties(AName: string): TValue;
 var
+  ACtx: TRttiContext;
   aProperty: TRttiProperty;
 begin
-  aProperty := RttiType.GetProperty(AName);
-  result := aProperty.GetValue(self);
+  result := nil;
+  ACtx := TRttiContext.create;
+  try
+    aProperty := ACtx.GetType(self.ClassType).GetProperty(AName);
+    if assigned(aProperty) then
+      result := aProperty.GetValue(self);
+  finally
+    ACtx.Free;
+  end;
+end;
+
+procedure TObjectHelper.GetPropertiesList(AList: TStrings);
+var
+  ACtx: TRttiContext;
+  aProperty: TRttiProperty;
+  aRtti: TRttiType;
+begin
+
+  AList.Clear;
+  ACtx := TRttiContext.create;
+  try
+    aRtti := ACtx.GetType(self.ClassType);
+    for aProperty in aRtti.GetProperties do
+    begin
+      AList.Add(aProperty.Name);
+    end;
+  finally
+    ACtx.Free;
+  end;
+
 end;
 
 function TObjectHelper.HasAttribute(aMethod: TRttiMethod;
@@ -148,16 +192,22 @@ end;
 function TObjectHelper.InvokeAttribute(attribClass: TCustomAttributeClass;
 params: array of TValue): Boolean;
 var
+  ACtx: TRttiContext;
   aMethod: TRttiMethod;
 begin
   result := False;
-  for aMethod in RttiType.GetMethods do
-  begin
-    if HasAttribute(aMethod, attribClass) then
+  ACtx := TRttiContext.create;
+  try
+    for aMethod in ACtx.GetType(self.ClassType).GetMethods do
     begin
-      aMethod.Invoke(self, params);
-      result := True;
+      if HasAttribute(aMethod, attribClass) then
+      begin
+        aMethod.Invoke(self, params);
+        result := True;
+      end;
     end;
+  finally
+    ACtx.Free;
   end;
 
 end;
@@ -196,13 +246,6 @@ begin
     end);
 end;
 
-function TObjectHelper.RttiType: TRttiType;
-var
-  aContext: TRttiContext;
-begin
-  result := aContext.GetType(self.ClassType)
-end;
-
 class procedure TObjectHelper.Run(Proc: TProc);
 begin
   TObject.Run<TObject>(TThread.CurrentThread,
@@ -224,17 +267,31 @@ end;
 procedure TObjectHelper.SetFields(AName: string; const Value: TValue);
 var
   AField: TRttiField;
+  ACtx: TRttiContext;
 begin
-  AField := RttiType.GetField(AName);
-  AField.SetValue(self, Value);
+  ACtx := TRttiContext.create;
+  try
+    AField := ACtx.GetType(self.ClassType).GetField(AName);
+    if assigned(AField) then
+      AField.SetValue(self, Value);
+  finally
+    ACtx.Free;
+  end;
 end;
 
 procedure TObjectHelper.SetProperties(AName: string; const Value: TValue);
 var
   aProperty: TRttiProperty;
+  ACtx: TRttiContext;
 begin
-  aProperty := RttiType.GetProperty(AName);
-  aProperty.SetValue(self, Value);
+  ACtx := TRttiContext.create;
+  try
+    aProperty := aCtx.GetType(self.ClassType).GetProperty(AName);
+    if assigned(aProperty) then
+      aProperty.SetValue(self, Value);
+  finally
+    ACtx.Free;
+  end;
 end;
 
 class procedure TObjectHelper.Synchronize(Proc: TProc);
