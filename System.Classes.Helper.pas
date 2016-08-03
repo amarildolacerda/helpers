@@ -2,7 +2,7 @@ unit System.Classes.Helper;
 
 interface
 
-uses System.Classes, System.SysUtils;
+uses System.Classes, System.SysUtils, System.Rtti;
 
 Type
 
@@ -22,11 +22,19 @@ Type
     property OnFireEvent: TProc<TObject> read FOnFireEvent write SetOnFireEvent;
   end;
 
+  TCustomAttributeClass = class of TCustomAttribute;
+
   TObjectHelper = class helper for TObject
   private
+    function GetProperties(AName: string): TValue;
+    procedure SetProperties(AName: string; const Value: TValue);
+    function GetFields(AName: string): TValue;
+    procedure SetFields(AName: string; const Value: TValue);
+    function GetMethods(AName: String): TRttiMethod;
   public
+    // metodos anonimous
     class procedure Using<T>(O: T; Proc: TProc<T>); static;
-    class function Anonimous<T: Class>(O: T; Proc: TProc<T>): TObject; static;
+    class function Anonymous<T: Class>(O: T; Proc: TProc<T>): TObject; static;
     class procedure Run<T: Class>(O: T; Proc: TProc<T>); overload; static;
     class procedure Run(Proc: TProc); overload; static;
     class procedure WaitFor<T: Class>(O: T; Proc: TProc<T>); overload; static;
@@ -37,6 +45,19 @@ Type
     class function Synchronize<T: Class>(O: T; Proc: TProc<T>): TObject;
       overload; static;
     class procedure Synchronize(Proc: TProc); overload; static;
+
+    // RTTI
+    function RttiType: TRttiType;
+    property Properties[AName: string]: TValue read GetProperties
+      write SetProperties;
+    property Fields[AName: string]: TValue read GetFields write SetFields;
+    property Methods[AName: String]: TRttiMethod read GetMethods;
+    function HasAttribute(aMethod: TRttiMethod;
+      attribClass: TCustomAttributeClass): Boolean;
+    function InvokeAttribute(attribClass: TCustomAttributeClass;
+      params: array of TValue): Boolean;
+    function InvokeMethod(AName: string; params: array of TValue): Boolean;
+
   end;
 
   TTaskList = class(TThreadList)
@@ -49,7 +70,6 @@ Type
     procedure Run(Proc: TProc);
     property MaxThread: integer read FMaxThread write SetMaxThread;
   end;
-
 
 implementation
 
@@ -91,6 +111,72 @@ begin
   FireEvent(self);
 end;
 
+function TObjectHelper.GetFields(AName: string): TValue;
+var
+  AField: TRttiField;
+begin
+  AField := RttiType.GetField(AName);
+  result := AField.GetValue(self);
+end;
+
+function TObjectHelper.GetMethods(AName: String): TRttiMethod;
+begin
+  result := RttiType.GetMethod(AName);
+end;
+
+function TObjectHelper.GetProperties(AName: string): TValue;
+var
+  aProperty: TRttiProperty;
+begin
+  aProperty := RttiType.GetProperty(AName);
+  result := aProperty.GetValue(self);
+end;
+
+function TObjectHelper.HasAttribute(aMethod: TRttiMethod;
+attribClass: TCustomAttributeClass): Boolean;
+var
+  attributes: TArray<TCustomAttribute>;
+  attrib: TCustomAttribute;
+begin
+  result := False;
+  attributes := aMethod.GetAttributes;
+  for attrib in attributes do
+    if attrib.InheritsFrom(attribClass) then
+      Exit(True);
+end;
+
+function TObjectHelper.InvokeAttribute(attribClass: TCustomAttributeClass;
+params: array of TValue): Boolean;
+var
+  aMethod: TRttiMethod;
+begin
+  result := False;
+  for aMethod in RttiType.GetMethods do
+  begin
+    if HasAttribute(aMethod, attribClass) then
+    begin
+      aMethod.Invoke(self, params);
+      result := True;
+    end;
+  end;
+
+end;
+
+function TObjectHelper.InvokeMethod(AName: string;
+params: array of TValue): Boolean;
+var
+  aMethod: TRttiMethod;
+begin
+  aMethod := Methods[AName];
+  if not assigned(aMethod) then
+    Exit(False);
+  try
+    aMethod.Invoke(self, params);
+  finally
+    aMethod.DisposeOf;
+  end;
+end;
+
 class procedure TObjectHelper.Queue(Proc: TProc);
 begin
   TThread.Queue(TThread.CurrentThread,
@@ -110,6 +196,13 @@ begin
     end);
 end;
 
+function TObjectHelper.RttiType: TRttiType;
+var
+  aContext: TRttiContext;
+begin
+  result := aContext.GetType(self.ClassType)
+end;
+
 class procedure TObjectHelper.Run(Proc: TProc);
 begin
   TObject.Run<TObject>(TThread.CurrentThread,
@@ -126,6 +219,22 @@ begin
     begin
       Proc(O);
     end).Start;
+end;
+
+procedure TObjectHelper.SetFields(AName: string; const Value: TValue);
+var
+  AField: TRttiField;
+begin
+  AField := RttiType.GetField(AName);
+  AField.SetValue(self, Value);
+end;
+
+procedure TObjectHelper.SetProperties(AName: string; const Value: TValue);
+var
+  aProperty: TRttiProperty;
+begin
+  aProperty := RttiType.GetProperty(AName);
+  aProperty.SetValue(self, Value);
 end;
 
 class procedure TObjectHelper.Synchronize(Proc: TProc);
@@ -147,7 +256,7 @@ begin
     end);
 end;
 
-class function TObjectHelper.Anonimous<T>(O: T; Proc: TProc<T>): TObject;
+class function TObjectHelper.Anonymous<T>(O: T; Proc: TProc<T>): TObject;
 begin
   result := O;
   Proc(O);
@@ -181,12 +290,12 @@ end;
 
 procedure TTaskList.Run(Proc: TProc);
 var
-  t: TThread;
+  T: TThread;
 begin
-  t := TThread.CreateAnonymousThread(Proc);
-  t.onTerminate := DoDestroyThread;
+  T := TThread.CreateAnonymousThread(Proc);
+  T.onTerminate := DoDestroyThread;
   Add(T);
-  t.Start;
+  T.Start;
 end;
 
 procedure TTaskList.SetMaxThread(const Value: integer);
