@@ -2,7 +2,7 @@ unit System.Classes.Helper;
 
 interface
 
-uses System.Classes, System.SysUtils, System.Rtti;
+uses System.Classes, System.SysUtils, System.Rtti, System.TypInfo;
 
 Type
 
@@ -23,6 +23,7 @@ Type
   end;
 
   TCustomAttributeClass = class of TCustomAttribute;
+  TMemberVisibilitySet = set of TMemberVisibility;
 
   TObjectHelper = class helper for TObject
   private
@@ -49,8 +50,11 @@ Type
     // RTTI
     property Properties[AName: string]: TValue read GetProperties
       write SetProperties;
-    procedure GetPropertiesList(AList: TStrings);
+    procedure GetPropertiesList(AList: TStrings;
+      AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
     property Fields[AName: string]: TValue read GetFields write SetFields;
+    procedure GetFieldsList(AList: TStrings;
+      AVisibility: TMemberVisibilitySet = [mvPublic]);
     property Methods[AName: String]: TRttiMethod read GetMethods;
     function HasAttribute(aMethod: TRttiMethod;
       attribClass: TCustomAttributeClass): Boolean;
@@ -127,6 +131,25 @@ begin
   end;
 end;
 
+procedure TObjectHelper.GetFieldsList(AList: TStrings;
+AVisibility: TMemberVisibilitySet = [mvPublic]);
+var
+  ACtx: TRttiContext;
+  AFld: TRttiField;
+begin
+  AList.clear;
+  ACtx := TRttiContext.create;
+  try
+    for AFld in ACtx.GetType(self.ClassType).GetFields do
+    begin
+      if AFld.Visibility in AVisibility then
+        AList.Add(AFld.Name);
+    end;
+  finally
+    ACtx.Free;
+  end;
+end;
+
 function TObjectHelper.GetMethods(AName: String): TRttiMethod;
 var
   ACtx: TRttiContext;
@@ -155,20 +178,22 @@ begin
   end;
 end;
 
-procedure TObjectHelper.GetPropertiesList(AList: TStrings);
+procedure TObjectHelper.GetPropertiesList(AList: TStrings;
+AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
 var
   ACtx: TRttiContext;
   aProperty: TRttiProperty;
   aRtti: TRttiType;
 begin
 
-  AList.Clear;
+  AList.clear;
   ACtx := TRttiContext.create;
   try
     aRtti := ACtx.GetType(self.ClassType);
     for aProperty in aRtti.GetProperties do
     begin
-      AList.Add(aProperty.Name);
+      if aProperty.Visibility in AVisibility then
+        AList.Add(aProperty.Name);
     end;
   finally
     ACtx.Free;
@@ -286,7 +311,7 @@ var
 begin
   ACtx := TRttiContext.create;
   try
-    aProperty := aCtx.GetType(self.ClassType).GetProperty(AName);
+    aProperty := ACtx.GetType(self.ClassType).GetProperty(AName);
     if assigned(aProperty) then
       aProperty.SetValue(self, Value);
   finally
