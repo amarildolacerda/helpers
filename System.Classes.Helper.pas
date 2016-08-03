@@ -248,7 +248,7 @@ begin
   try
     aMethod.Invoke(self, params);
   finally
-    aMethod.DisposeOf;
+    //aMethod.DisposeOf;
   end;
 end;
 
