@@ -71,18 +71,26 @@ Type
     class procedure Synchronize(Proc: TProc); overload; static;
 
     // RTTI
+    function PropertyCount: Integer;
+    function PropertyName(idx: Integer): string;
     property Properties[AName: string]: TValue read GetProperties
       write SetProperties;
     procedure GetPropertiesList(AList: TStrings;
       const AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
+
+    function FieldsCount: Integer;
+    function FieldName(idx: Integer): string;
     property Fields[AName: string]: TValue read GetFields write SetFields;
     procedure GetFieldsList(AList: TStrings;
       const AVisibility: TMemberVisibilitySet = [mvPublic]);
+
     property Methods[AName: String]: TRttiMethod read GetMethods;
     procedure GetMethodsList(AList: TStrings;
       const AVisibility: TMemberVisibilitySet = [mvPublic]);
+
     function HasAttribute(aMethod: TRttiMethod;
       attribClass: TCustomAttributeClass): Boolean;
+
     function InvokeAttribute(attribClass: TCustomAttributeClass;
       params: array of TValue): Boolean;
     function InvokeMethod(AName: string; params: array of TValue): Boolean;
@@ -91,13 +99,13 @@ Type
 
   TTaskList = class(TThreadList)
   private
-    FMaxThread: integer;
-    procedure SetMaxThread(const Value: integer);
+    FMaxThread: Integer;
+    procedure SetMaxThread(const Value: Integer);
   public
     constructor create;
     procedure DoDestroyThread(Value: TObject);
     procedure Run(Proc: TProc);
-    property MaxThread: integer read FMaxThread write SetMaxThread;
+    property MaxThread: Integer read FMaxThread write SetMaxThread;
   end;
 
 implementation
@@ -140,48 +148,72 @@ begin
   FireEvent(self);
 end;
 
+function TObjectHelper.FieldName(idx: Integer): string;
+var
+  aCtx: TRttiContext;
+begin
+  aCtx := TRttiContext.create;
+  try
+    result := ACtx.GetType(self.ClassType).GetFields[idx].Name;
+  finally
+    aCtx.Free;
+  end;
+end;
+
+function TObjectHelper.FieldsCount: Integer;
+var
+  aCtx: TRttiContext;
+begin
+  aCtx := TRttiContext.create;
+  try
+    result := High(aCtx.GetType(self.ClassType).GetFields);
+  finally
+    aCtx.Free;
+  end;
+end;
+
 function TObjectHelper.GetFields(AName: string): TValue;
 var
-  ACtx: TRttiContext;
+  aCtx: TRttiContext;
   AField: TRttiField;
 begin
   result := nil;
-  ACtx := TRttiContext.create;
+  aCtx := TRttiContext.create;
   try
-    AField := ACtx.GetType(self.ClassType).GetField(AName);
+    AField := aCtx.GetType(self.ClassType).GetField(AName);
     if assigned(AField) then
       result := AField.GetValue(self);
   finally
-    ACtx.Free;
+    aCtx.Free;
   end;
 end;
 
 procedure TObjectHelper.GetFieldsList(AList: TStrings;
 const AVisibility: TMemberVisibilitySet = [mvPublic]);
 var
-  ACtx: TRttiContext;
+  aCtx: TRttiContext;
   AFld: TRttiField;
 begin
   AList.clear;
-  ACtx := TRttiContext.create;
+  aCtx := TRttiContext.create;
   try
-    for AFld in ACtx.GetType(self.ClassType).GetFields do
+    for AFld in aCtx.GetType(self.ClassType).GetFields do
     begin
       if AFld.Visibility in AVisibility then
         AList.Add(AFld.Name);
     end;
   finally
-    ACtx.Free;
+    aCtx.Free;
   end;
 end;
 
 function TObjectHelper.GetMethods(AName: String): TRttiMethod;
 var
-  ACtx: TRttiContext;
+  aCtx: TRttiContext;
 begin
-  ACtx := TRttiContext.create;
+  aCtx := TRttiContext.create;
   try
-    result := ACtx.GetType(self.ClassType).GetMethod(AName);
+    result := aCtx.GetType(self.ClassType).GetMethod(AName);
   finally
     // ACtx.Free;
   end;
@@ -191,56 +223,56 @@ procedure TObjectHelper.GetMethodsList(AList: TStrings;
 const AVisibility: TMemberVisibilitySet = [mvPublic]);
 var
   aMethod: TRttiMethod;
-  ACtx: TRttiContext;
+  aCtx: TRttiContext;
 begin
   AList.clear;
-  ACtx := TRttiContext.create;
+  aCtx := TRttiContext.create;
   try
-    for aMethod in ACtx.GetType(self.ClassType).GetMethods do
+    for aMethod in aCtx.GetType(self.ClassType).GetMethods do
     begin
       if aMethod.Visibility in AVisibility then
         AList.Add(aMethod.Name);
     end;
   finally
-    ACtx.Free;
+    aCtx.Free;
   end;
 end;
 
 function TObjectHelper.GetProperties(AName: string): TValue;
 var
-  ACtx: TRttiContext;
+  aCtx: TRttiContext;
   aProperty: TRttiProperty;
 begin
   result := nil;
-  ACtx := TRttiContext.create;
+  aCtx := TRttiContext.create;
   try
-    aProperty := ACtx.GetType(self.ClassType).GetProperty(AName);
+    aProperty := aCtx.GetType(self.ClassType).GetProperty(AName);
     if assigned(aProperty) then
       result := aProperty.GetValue(self);
   finally
-    ACtx.Free;
+    aCtx.Free;
   end;
 end;
 
 procedure TObjectHelper.GetPropertiesList(AList: TStrings;
 const AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
 var
-  ACtx: TRttiContext;
+  aCtx: TRttiContext;
   aProperty: TRttiProperty;
   aRtti: TRttiType;
 begin
 
   AList.clear;
-  ACtx := TRttiContext.create;
+  aCtx := TRttiContext.create;
   try
-    aRtti := ACtx.GetType(self.ClassType);
+    aRtti := aCtx.GetType(self.ClassType);
     for aProperty in aRtti.GetProperties do
     begin
       if aProperty.Visibility in AVisibility then
         AList.Add(aProperty.Name);
     end;
   finally
-    ACtx.Free;
+    aCtx.Free;
   end;
 
 end;
@@ -261,13 +293,13 @@ end;
 function TObjectHelper.InvokeAttribute(attribClass: TCustomAttributeClass;
 params: array of TValue): Boolean;
 var
-  ACtx: TRttiContext;
+  aCtx: TRttiContext;
   aMethod: TRttiMethod;
 begin
   result := False;
-  ACtx := TRttiContext.create;
+  aCtx := TRttiContext.create;
   try
-    for aMethod in ACtx.GetType(self.ClassType).GetMethods do
+    for aMethod in aCtx.GetType(self.ClassType).GetMethods do
     begin
       if HasAttribute(aMethod, attribClass) then
       begin
@@ -276,7 +308,7 @@ begin
       end;
     end;
   finally
-    ACtx.Free;
+    aCtx.Free;
   end;
 
 end;
@@ -292,6 +324,30 @@ begin
   try
     aMethod.Invoke(self, params);
   finally
+  end;
+end;
+
+function TObjectHelper.PropertyCount: Integer;
+var
+  aCtx: TRttiContext;
+begin
+  aCtx := TRttiContext.create;
+  try
+    result := High(aCtx.GetType(self.ClassType).GetProperties);
+  finally
+    aCtx.Free;
+  end;
+end;
+
+function TObjectHelper.PropertyName(idx: Integer): string;
+var
+  aCtx: TRttiContext;
+begin
+  aCtx := TRttiContext.create;
+  try
+    result := aCtx.GetType(self.ClassType).GetProperties[idx].Name;
+  finally
+    aCtx.Free;
   end;
 end;
 
@@ -335,30 +391,30 @@ end;
 procedure TObjectHelper.SetFields(AName: string; const Value: TValue);
 var
   AField: TRttiField;
-  ACtx: TRttiContext;
+  aCtx: TRttiContext;
 begin
-  ACtx := TRttiContext.create;
+  aCtx := TRttiContext.create;
   try
-    AField := ACtx.GetType(self.ClassType).GetField(AName);
+    AField := aCtx.GetType(self.ClassType).GetField(AName);
     if assigned(AField) then
       AField.SetValue(self, Value);
   finally
-    ACtx.Free;
+    aCtx.Free;
   end;
 end;
 
 procedure TObjectHelper.SetProperties(AName: string; const Value: TValue);
 var
   aProperty: TRttiProperty;
-  ACtx: TRttiContext;
+  aCtx: TRttiContext;
 begin
-  ACtx := TRttiContext.create;
+  aCtx := TRttiContext.create;
   try
-    aProperty := ACtx.GetType(self.ClassType).GetProperty(AName);
+    aProperty := aCtx.GetType(self.ClassType).GetProperty(AName);
     if assigned(aProperty) then
       aProperty.SetValue(self, Value);
   finally
-    ACtx.Free;
+    aCtx.Free;
   end;
 end;
 
@@ -423,7 +479,7 @@ begin
   T.Start;
 end;
 
-procedure TTaskList.SetMaxThread(const Value: integer);
+procedure TTaskList.SetMaxThread(const Value: Integer);
 begin
   FMaxThread := Value;
 end;

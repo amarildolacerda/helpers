@@ -1,31 +1,31 @@
-{***************************************************************************}
-{                                                                           }
-{                                                                           }
-{           Copyright (C) Amarildo Lacerda                                  }
-{                                                                           }
-{           https://github.com/amarildolacerda                              }
-{                                                                           }
-{                                                                           }
-{***************************************************************************}
-{                                                                           }
-{  Licensed under the Apache License, Version 2.0 (the "License");          }
-{  you may not use this file except in compliance with the License.         }
-{  You may obtain a copy of the License at                                  }
-{                                                                           }
-{      http://www.apache.org/licenses/LICENSE-2.0                           }
-{                                                                           }
-{  Unless required by applicable law or agreed to in writing, software      }
-{  distributed under the License is distributed on an "AS IS" BASIS,        }
-{  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. }
-{  See the License for the specific language governing permissions and      }
-{  limitations under the License.                                           }
-{                                                                           }
-{***************************************************************************}
-
+{ *************************************************************************** }
+{ }
+{ }
+{ Copyright (C) Amarildo Lacerda }
+{ }
+{ https://github.com/amarildolacerda }
+{ }
+{ }
+{ *************************************************************************** }
+{ }
+{ Licensed under the Apache License, Version 2.0 (the "License"); }
+{ you may not use this file except in compliance with the License. }
+{ You may obtain a copy of the License at }
+{ }
+{ http://www.apache.org/licenses/LICENSE-2.0 }
+{ }
+{ Unless required by applicable law or agreed to in writing, software }
+{ distributed under the License is distributed on an "AS IS" BASIS, }
+{ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. }
+{ See the License for the specific language governing permissions and }
+{ limitations under the License. }
+{ }
+{ *************************************************************************** }
 
 {
   Alterações:
-      25/03/16 - Primeira versão publicada - Construção
+  25/03/16 - Primeira versão publicada - Construção
+  25/07/16 - refactoring na interface para acoplar o dataset.. Connector
 }
 
 unit Data.QueryIntf;
@@ -42,89 +42,94 @@ uses
 
 type
 
+  TDatasetClass = class of TDataset;
   IQuery = interface;
-  TQueryIntf = class;
+  // TQueryIntf = class;
 
   TDataStorageRec = record
-    class function NewQuery(const Conn:TFDCustomConnection): IQuery; overload; static;
+    class function NewQuery(const Conn: TFDCustomConnection): IQuery;
+      overload; static;
     class function NewQuery(): IQuery; overload; static;
     class function NewQuery(const ATable: string; const AFields: String = '*';
-      const AWhere: String = ''; const AOrderBy: string = '';
-      const AJoin: String = ''): IQuery; overload; static;
+      const AWhere: String = ''; const AGroup: string = '';
+      const AOrderBy: string = ''; const AJoin: String = ''): IQuery;
+      overload; static;
     class function SqlBuilder(const ATable: string; const AFields: String = '*';
-      const AWhere: String = ''; const AOrderBy: string = '';
-      const AJoin: String = ''): string; overload; static;
+      const AWhere: String = ''; const AGroup: String = '';
+      const AOrderBy: string = ''; const AJoin: String = ''): string;
+      overload; static;
   end;
 
+  IJsonDataset = interface
+    ['{535F0BD0-6535-452B-9E84-6A9BFCFCEB91}']
+    function ToJson: string;
+  end;
 
-  IDataset = interface
-    ['{AED88905-4241-4BBD-9035-1112C882CF05}']
-    function Open: IQuery;
-    function Close:IQuery;
+  IDataset = interface(IJsonDataset)
     procedure Next;
     procedure Prior;
     procedure Last;
     procedure First;
     function eof: boolean;
     function bof: boolean;
-    procedure insert;
+    procedure Insert;
+    procedure Append;
     procedure post;
     procedure edit;
     procedure delete;
-    function StartTransaction:IQuery;
-    function Commit:IQuery;
-    function Rollback:IQuery;
-    function RowsAffected: integer;
-    function GetFields: TFields;
-    property Fields: TFields read GetFields;
-    function RecordCountInt:integer;
-    property RecordCount:integer read RecordCountInt;
     function GetActiveQuery: boolean;
     procedure SetActiveQuery(const Value: boolean);
-    property Active:boolean read GetActiveQuery Write SetActiveQuery;
-
+    property Active: boolean read GetActiveQuery Write SetActiveQuery;
+    function GetFields: TFields;
+    property Fields: TFields read GetFields;
+    function RowsAffected: integer;
+    function GetCommand: string;
+    procedure SetCommand(const ACommand: string);
+    property Command: string read GetCommand write SetCommand;
   end;
 
+  IDatasetIntf = interface(IDataset)
+    function Open: IQuery;
+    function Close: IQuery;
+    function StartTransaction: IQuery;
+    function Commit: IQuery;
+    function Rollback: IQuery;
+    function RecordCountInt: integer;
+    property RecordCount: integer read RecordCountInt;
+  end;
 
-  IQuery = Interface(IDataset)
+  IQuery = Interface(IDatasetIntf)
     ['{4C9E016E-41A2-42D1-899E-D820FE4FA9C4}']
-    function ExecSql(const AScript: string):IQuery;
-    procedure SetCommand(const ACommand: string);
-    function GetCommand: string;
-    procedure SetConnectionIntf(const AConn: TFDCustomConnection);
-    function GetConnectionIntf: TFDCustomConnection;
-    property Command: string read GetCommand write SetCommand;
-    property Connection: TFDCustomConnection read GetConnectionIntf
-      write SetConnectionIntf;
+    function ExecSql(const AScript: string): IQuery;
     function GetParams: TFDParams;
     property Params: TFDParams read GetParams;
-
 
     // Enumerator
     function GetEnumerator: IQuery;
     function GetCurrent: TFields;
-    property Current:TFields read GetCurrent;
+    property Current: TFields read GetCurrent;
     function MoveNext: boolean;
     procedure Reset;
 
     // Open
-    function Open(const AProc:TProc<TFDParams> ): IQuery;overload;
-    function DoLoop( const AProc:TProc<TDataset> ):IQuery;
-    function DoQuery( const AProc:TProc<TDataset>):IQuery;
-    function Clone:IQuery;
+    function Open(const AProc: TProc<TFDParams>): IQuery; overload;
+    function DoLoop(const AProc: TProc<TDataset>): IQuery;
+    function DoQuery(const AProc: TProc<TDataset>): IQuery;
+    function Clone: IQuery;
 
     // Filters
-    function ConnectName(texto:String):IQuery;
-    function Where(const texto:string):IQuery;
-    function Table(const texto:string):IQuery;
-    function Join(const texto:string):IQuery;
-    function OrderBy( const Texto:string):IQuery;
-    function AndWhere( const texto:string):IQuery;
-    function OrWhere( const texto:string):IQuery;
-    function FilterResult( const texto:string):IQuery;
-    function FieldNames(const texto:string):IQuery;
-    function paramValue(const nome:string; valor:variant):IQuery;
-    function fieldValue(const nome:string; valor:variant):IQuery;
+    function ConnectName(texto: String): IQuery;
+    function Where(const texto: string): IQuery;
+    function Table(const texto: string): IQuery;
+    function Join(const texto: string): IQuery;
+    function GroupBy(const texto: string): IQuery;
+    function OrderBy(const texto: string): IQuery;
+    function AndWhere(const texto: string): IQuery;
+    function OrWhere(const texto: string): IQuery;
+    function FilterResult(const texto: string): IQuery;
+    function FieldNames(const texto: string): IQuery;
+    function ParamValue(const nome: string; valor: variant): IQuery;
+    function FieldValue(const nome: string; valor: variant): IQuery;
 
     function GetCmdFields: string;
     function GetCmdJoin: string;
@@ -136,43 +141,60 @@ type
     procedure SetCmdJoin(const Value: string);
     procedure SetCmdOrderBy(const Value: string);
     procedure SetCmdTable(const Value: string);
-    property CmdWhere:string read GetCmdWhere write SetCmdWhere;
-    property CmdTable:string read GetCmdTable write SetCmdTable;
-    property CmdFields:string read GetCmdFields write SetCmdFiedls;
-    property CmdJoin:string read GetCmdJoin write SetCmdJoin;
-    property CmdOrderBy:string read GetCmdOrderBy write SetCmdOrderBy;
+    function GetCmdGroup: String;
+    procedure SetCmdGroup(const Value: String);
 
+    property CmdWhere: string read GetCmdWhere write SetCmdWhere;
+    property CmdTable: string read GetCmdTable write SetCmdTable;
+    property CmdFields: string read GetCmdFields write SetCmdFiedls;
+    property CmdJoin: string read GetCmdJoin write SetCmdJoin;
+    property CmdOrderBy: string read GetCmdOrderBy write SetCmdOrderBy;
+    property CmdGroup: string read GetCmdGroup write SetCmdGroup;
+
+    function GetDataset: TFDQuery;
+    procedure SetDataset(const Value: TFDQuery);
+    property Dataset: TFDQuery read GetDataset write SetDataset;
 
   End;
 
-  IDatabase = interface
+  (* IDatabase = interface
     ['{09A79486-12B6-4944-9F4C-8CF841D901E5}']
     function Open:IDatabase;
+    function Close:IDatabase;
     function ParamValue(sParam:string;value:variant):IDatabase;
     function Driver(ADriver:string):IDatabase;
     function ConnectName(ADBname:string):IDatabase;
     function LoginParam(AUser:string;APass:String):IDatabase;
-  end;
+    end;
 
-  TDatabaseIntf = class(TFDCustomConnection,IDatabase)
+    TDatabaseIntf = class(TComponent,IDatabase)
+    private
+    FDatabase:TFDConnection;
     public
-      class function new:IDatabase;
-      function Open:IDatabase;overload;
-      function Close:IDatabase;overload;
-      function ParamValue(sParam:string;value:variant):IDatabase;
-      function Driver(ADriver:string):IDatabase;
-      function ConnectName(ADBname:string):IDatabase;
-      function LoginParam(AUser:string;APass:String):IDatabase;
-  end;
 
-  TQueryIntf = class(TFDQuery, IQuery, IDataset)
+    class function new:IDatabase;
+    function Open:IDatabase;virtual;
+    function Close:IDatabase;virtual;
+    function ParamValue(sParam:string;value:variant):IDatabase;
+    function Driver(ADriver:string):IDatabase;
+    function ConnectName(ADBname:string):IDatabase;
+    function LoginParam(AUser:string;APass:String):IDatabase;
+    end;
+  *)
+
+   TQueryIntfBase =  TFDQuery;
+
+  TQueryIntf<T:TFDQuery> = class(TComponent, IQuery)
   private
-    FScrollRow:Integer;
-    FWhere:string;
-    FJoin:string;
-    FTable:string;
-    FFieldNames:string;
-    FOrderBy:string;
+    FFreeOnDestroy: boolean;
+    FScrollRow: integer;
+    FDataset: TFDQuery;
+    FWhere: string;
+    FGroup: string;
+    FJoin: string;
+    FTable: string;
+    FFieldNames: string;
+    FOrderBy: string;
     procedure SetFieldByName(const AField: string; const AValue: variant);
     function GetActiveQuery: boolean;
     procedure SetActiveQuery(const Value: boolean);
@@ -186,65 +208,83 @@ type
     procedure SetCmdJoin(const Value: string);
     procedure SetCmdOrderBy(const Value: string);
     procedure SetCmdTable(const Value: string);
+    procedure Next;
+    procedure Prior;
+    procedure Last;
+    procedure First;
+    procedure Insert;
+    procedure Append;
+    procedure Reset;
+    function Clone: IQuery;
+    function Commit: IQuery;
+    function DoLoop(const AProc: TProc<TDataset>): IQuery;
+    function DoQuery(const AProc: TProc<TDataset>): IQuery;
+    function ExecSql(const AScript: string): IQuery;
+    function Open(const AProc: TProc<TFDParams>): IQuery; overload;
+    function Open: IQuery; overload;
+    function Rollback: IQuery;
+    function StartTransaction: IQuery;
+    function MoveBy(Distance: integer): integer;
+    procedure post;
+    procedure edit;
+    procedure delete;
+    function GetCmdGroup: String;
+    procedure SetCmdGroup(const Value: String);
+    procedure SetDataset(Const ADataset: TFDQuery);
+    function GetDataset: TFDQuery;
+    procedure SetFreeOnDestroy(const Value: boolean);
+  protected
   public
-    class function New:IQuery;overload;
-    class function New(const AConnection: TFDCustomConnection): IQuery;overload;
-    function Close:IQuery;
-    function ConnectName(texto:String):IQuery;virtual;
+    property FreeOnDestroy:boolean read FFreeOnDestroy write SetFreeOnDestroy;
+    function GetQuery: T;
+    property Dataset: TFDQuery read GetDataset Write SetDataset;
+    class function New: IQuery; overload; static;
+    class function New(ADataset: T): IQuery; overload; static;
+    class function New(const AConnection: TFDCustomConnection): IQuery;
+      overload;
+    function Close: IQuery; virtual;
+    function ConnectName(texto: String): IQuery; virtual;
 
     function RowsAffected: integer;
     function eof: boolean;
     function bof: boolean;
     function GetCurrent: TFields;
     function MoveNext: boolean;
-    procedure Reset;
-    function ExecSql(const AScript: string):IQuery; overload;
     function GetCommand: string;
     procedure SetCommand(const ACommand: string);
     procedure SetConnectionIntf(const AConn: TFDCustomConnection);
     function GetConnectionIntf: TFDCustomConnection;
-    function StartTransaction:IQuery;
-    function Commit:IQuery;
-    function Rollback:IQuery;
-    function Open: IQuery;overload;virtual;
-    function Open(const AProc:TProc<TFDParams> ): IQuery;overload;virtual;
-    procedure InternalFirst;override;
-    procedure InternalDelete; override;
-    procedure InternalLast; override;
-    function MoveBy(Distance: Integer): Integer; override;
-    function DoLoop(const AProc:TProc<TDataset> ):IQuery;
-    function DoQuery( const AProc:TProc<TDataset>):IQuery;
-
 
     function GetFields: TFields;
-    function GetEnumerator:IQuery;
+    function GetEnumerator: IQuery;
     function GetParams: TFDParams;
-    function paramValue(const nome:string; valor:variant):IQuery;
-    function fieldValue(const nome:string; valor:variant):IQuery;
-    function NewQuery(const ATable: string=''; const AFields: String = '*';
-      const AWhere: String = ''; const AOrderBy: string = '';
-      const AJoin: String = ''): IQuery;
-    constructor create(AOwner:TComponent);override;
-    destructor Destroy;override;
-    function Clone:IQuery;
-    function RebuildSql:IQuery;
-    function Where(const texto:string):IQuery;virtual;
-    function Table(const texto:string):IQuery;virtual;
-    function FieldNames(const texto:string):IQuery;virtual;
-    function Join(const texto:string):IQuery;virtual;
-    function OrderBy( const Texto:string):IQuery;virtual;
-    function AndWhere( const texto:string):IQuery;virtual;
-    function OrWhere( const texto:string):IQuery;virtual;
-    function FilterResult( const texto:string):IQuery;
-    function RecordCountInt:integer;
+    function ParamValue(const nome: string; valor: variant): IQuery;
+    function FieldValue(const nome: string; valor: variant): IQuery;
+    function NewQuery(ATable, AFields, AWhere, AGroup, AOrderBy,
+      AJoin: String): IQuery;
+    constructor create(AOwner: TComponent); overload; override;
+    constructor create(); overload;
+    destructor Destroy; override;
+    function RebuildSql: IQuery;
+    function GroupBy(const texto: string): IQuery;
 
-    property CmdWhere:string read GetCmdWhere write SetCmdWhere;
-    property CmdTable:string read GetCmdTable write SetCmdTable;
-    property CmdFields:string read GetCmdFields write SetCmdFiedls;
-    property CmdJoin:string read GetCmdJoin write SetCmdJoin;
-    property CmdOrderBy:string read GetCmdOrderBy write SetCmdOrderBy;
+    function Where(const texto: string): IQuery; virtual;
+    function Table(const texto: string): IQuery; virtual;
+    function FieldNames(const texto: string): IQuery; virtual;
+    function Join(const texto: string): IQuery; virtual;
+    function OrderBy(const texto: string): IQuery; virtual;
+    function AndWhere(const texto: string): IQuery; virtual;
+    function OrWhere(const texto: string): IQuery; virtual;
+    function FilterResult(const texto: string): IQuery;
+    function RecordCountInt: integer;
+    function ToJson: string;
 
-
+    property CmdFields: string read GetCmdFields write SetCmdFiedls;
+    property CmdTable: string read GetCmdTable write SetCmdTable;
+    property CmdWhere: string read GetCmdWhere write SetCmdWhere;
+    property CmdJoin: string read GetCmdJoin write SetCmdJoin;
+    property CmdGroup: String read GetCmdGroup write SetCmdGroup;
+    property CmdOrderBy: string read GetCmdOrderBy write SetCmdOrderBy;
 
   end;
 
@@ -252,433 +292,558 @@ implementation
 
 { TQueyIntf }
 
-function TQueryIntf.RowsAffected: integer;
+function TQueryIntf<T>.Rollback: IQuery;
 begin
-  result := inherited RowsAffected;
+  TQueryIntfBase(FDataset) .Connection.Rollback;
+  result := self;
 end;
 
-function TQueryIntf.AndWhere(const texto: string):IQuery;
+function TQueryIntf<T>.RowsAffected: integer;
 begin
-   result := self;
-   if FWhere <>'' then
-      FWhere := FWhere + ' and ';
-   FWhere := FWhere + texto;
-   RebuildSql;
+  result := TQueryIntfBase(FDataset).RowsAffected;
 end;
 
-function TQueryIntf.bof: boolean;
-begin
-  result := inherited bof;
-end;
-
-function TQueryIntf.Clone: IQuery;
-begin
-   result := TQueryIntf.Create(nil);
-   result.Command := self.GetCommand;
-   result.Connection := self.GetConnectionIntf;
-end;
-
-function TQueryIntf.Close: IQuery;
-begin
-   result := self;
-   inherited close;
-end;
-
-function TQueryIntf.Commit:IQuery;
+function TQueryIntf<T>.AndWhere(const texto: string): IQuery;
 begin
   result := self;
-  Connection.Commit;
+  if FWhere <> '' then
+    FWhere := FWhere + ' and ';
+  FWhere := FWhere + texto;
+  RebuildSql;
 end;
 
-function TQueryIntf.ConnectName(texto: String): IQuery;
+procedure TQueryIntf<T>.Append;
+begin
+  TQueryIntfBase(FDataset).Append;
+end;
+
+function TQueryIntf<T>.bof: boolean;
+begin
+  result := TQueryIntfBase(FDataset).bof;
+end;
+
+function TQueryIntf<T>.Clone: IQuery;
+begin
+  result := TQueryIntf<T>.create(nil) as IQuery;
+  if result.CmdTable <> '' then
+  begin
+    result.CmdTable := self.CmdTable;
+    result.CmdWhere := self.CmdWhere;
+    result.CmdJoin := self.CmdJoin;
+    result.CmdFields := self.CmdFields;
+    result.CmdOrderBy := self.CmdOrderBy;
+    result.CmdGroup := self.CmdGroup;
+  end
+  else
+    result.Dataset.sql.assign(TQueryIntfBase(FDataset).sql);
+  result.Dataset.Connection := self.Dataset.Connection;
+end;
+
+function TQueryIntf<T>.Close: IQuery;
 begin
   result := self;
-  ConnectionName := texto;
+  TQueryIntfBase(FDataset).Close;
 end;
 
-constructor TQueryIntf.create(AOwner: TComponent);
+function TQueryIntf<T>.Commit: IQuery;
+begin
+  result := self;
+  Dataset.Connection.Commit;
+end;
+
+function TQueryIntf<T>.ConnectName(texto: String): IQuery;
+begin
+  result := self;
+  Dataset.ConnectionName := texto;
+end;
+
+constructor TQueryIntf<T>.create();
+begin
+  inherited create(nil);
+  FFreeOnDestroy := true;
+  FDataset := T.Create(nil);
+
+  if not supports(FDataset, IQuery) then
+  begin
+    FreeAndNil(FDataset);
+    raise exception.create('Não suporta interface IQuery');
+  end;
+
+end;
+
+constructor TQueryIntf<T>.create(AOwner: TComponent);
 begin
   inherited;
-  FFieldNames:='*';
+  FFreeOnDestroy := false;
+  if supports(AOwner, IJsonDataset) then
+    FDataset := T(AOwner)
+  else
+  begin
+    FDataset := T.create(self);
+    if not supports(FDataset, IQuery) then
+    begin
+      FreeAndNil(FDataset);
+      raise exception.create('Não suporta interface IQuery');
+    end;
+    FFreeOnDestroy := true;
+  end;
+
+  FFieldNames := '*';
   FScrollRow := -1;
 
 end;
 
-destructor TQueryIntf.Destroy;
+procedure TQueryIntf<T>.delete;
 begin
+  FDataset.delete;
+end;
+
+destructor TQueryIntf<T>.Destroy;
+begin
+  if FFreeOnDestroy then
+    FreeAndNil(FDataset);
   inherited;
 end;
 
-
-function TQueryIntf.DoLoop(const AProc: TProc<TDataset>):IQuery;
+function TQueryIntf<T>.DoLoop(const AProc: TProc<TDataset>): IQuery;
 var
-    book:TBookmark;
+  book: TBookmark;
 begin
   result := self;
-  DisableControls;
+  FDataset.DisableControls;
   try
-    book := GetBookmark;
+    book := FDataset.GetBookmark;
     try
-       first;
-       while not eof do
-       begin
-          try
-          AProc(self);
-          next;
-          except
-            break;
-          end;
-       end;
+      First;
+      while not eof do
+      begin
+        try
+          AProc(self.FDataset);
+          Next;
+        except
+          break;
+        end;
+      end;
 
     finally
-      GotoBookmark(book);
-      FreeBookmark(book);
+      FDataset.GotoBookmark(book);
+      FDataset.FreeBookmark(book);
     end;
   finally
-    EnableControls;
+    FDataset.EnableControls;
   end;
 end;
 
-function TQueryIntf.DoQuery(const AProc: TProc<TDataset>): IQuery;
-begin
-   result := self;
-   AProc(self);
-end;
-
-function TQueryIntf.eof: boolean;
-begin
-  result := inherited eof;
-end;
-
-function TQueryIntf.ExecSql(const AScript: string):IQuery;
+function TQueryIntf<T>.DoQuery(const AProc: TProc<TDataset>): IQuery;
 begin
   result := self;
-  sql.Text := AScript;
-  inherited Execute();
+  AProc(self.FDataset);
 end;
 
-function TQueryIntf.FieldNames(const texto: string): IQuery;
+procedure TQueryIntf<T>.edit;
 begin
-   result := self;
-   FFieldNames := texto;
-   RebuildSql;
+  FDataset.edit;
 end;
 
-function TQueryIntf.fieldValue(const nome: string; valor: variant): IQuery;
-var fld:TField;
+function TQueryIntf<T>.eof: boolean;
 begin
-   result := self;
-   fld := FindField(nome);
-   if fld<>nil then
-      fld.Value := valor;
+  result := FDataset.eof;
 end;
 
-function TQueryIntf.FilterResult(const texto: string):IQuery;
+function TQueryIntf<T>.ExecSql(const AScript: string): IQuery;
 begin
   result := self;
-  inherited Filter:= texto;
-  inherited Filtered := texto<>'';
+  FDataset.sql.Text := AScript;
+  FDataset.Execute();
 end;
 
-
-procedure TQueryIntf.InternalDelete;
+function TQueryIntf<T>.FieldNames(const texto: string): IQuery;
 begin
-  inherited;
-  if bof then
-     FScrollRow := -1;
+  result := self;
+  FFieldNames := texto;
+  RebuildSql;
 end;
 
-procedure TQueryIntf.InternalFirst;
+function TQueryIntf<T>.FieldValue(const nome: string; valor: variant): IQuery;
+var
+  fld: TField;
 begin
-  inherited;
-  FScrollRow := -1;
+  result := self;
+  fld := FDataset.FindField(nome);
+  if fld <> nil then
+    fld.Value := valor;
 end;
 
-procedure TQueryIntf.InternalLast;
+function TQueryIntf<T>.FilterResult(const texto: string): IQuery;
 begin
-  inherited;
-  if bof then
-     FScrollRow := -1;
-
+  result := self;
+  FDataset.Filter := texto;
+  FDataset.Filtered := texto <> '';
 end;
 
-function TQueryIntf.Join(const texto: string): IQuery;
+procedure TQueryIntf<T>.First;
 begin
-   result := self;
-   FJoin := texto;
-   RebuildSql;
+  FDataset.First;
 end;
 
-function TQueryIntf.GetActiveQuery: boolean;
+function TQueryIntf<T>.Join(const texto: string): IQuery;
 begin
-  result := inherited Active;
+  result := self;
+  FJoin := texto;
+  RebuildSql;
 end;
 
-function TQueryIntf.GetCommand: string;
+procedure TQueryIntf<T>.Last;
 begin
-  result := sql.Text;
+  FDataset.Last;
 end;
 
-function TQueryIntf.GetConnectionIntf: TFDCustomConnection;
+function TQueryIntf<T>.GetActiveQuery: boolean;
 begin
-  result := inherited Connection;
+  result := FDataset.Active;
 end;
 
-function TQueryIntf.GetCurrent:TFields;
+function TQueryIntf<T>.GetCommand: string;
 begin
-  result := self.Fields;
+  result := FDataset.sql.Text;
 end;
 
-function TQueryIntf.GetEnumerator:IQuery;
+function TQueryIntf<T>.GetConnectionIntf: TFDCustomConnection;
+begin
+  result := FDataset.Connection;
+end;
+
+function TQueryIntf<T>.GetCurrent: TFields;
+begin
+  result := FDataset.Fields;
+end;
+
+function TQueryIntf<T>.GetDataset: TFDQuery;
+begin
+  result := T(FDataset);
+end;
+
+function TQueryIntf<T>.GetEnumerator: IQuery;
 begin
   result := self as IQuery;
 end;
 
-function TQueryIntf.GetFields: TFields;
+function TQueryIntf<T>.GetFields: TFields;
 begin
-  result := inherited Fields;
+  result := FDataset.Fields;
 end;
 
-function TQueryIntf.GetParams: TFDParams;
+function TQueryIntf<T>.GetParams: TFDParams;
 begin
-  result := inherited Params;
+  result := FDataset.Params;
 end;
 
-function TQueryIntf.GetCmdFields: string;
+function TQueryIntf<T>.GetQuery: T;
 begin
-   result := FFieldNames;
+  result := T(FDataset);
 end;
 
-function TQueryIntf.GetCmdJoin: string;
+function TQueryIntf<T>.GroupBy(const texto: string): IQuery;
 begin
-   result := FJoin;
+  result := self;
+  FGroup := texto;
+  RebuildSql;
 end;
 
-function TQueryIntf.GetCmdOrderBy: string;
+procedure TQueryIntf<T>.Insert;
 begin
-   result := FOrderBy;
+  FDataset.Insert;
 end;
 
-function TQueryIntf.GetCmdTable: string;
+function TQueryIntf<T>.GetCmdFields: string;
 begin
-   result := FTable;
+  result := FFieldNames;
 end;
 
-function TQueryIntf.GetCmdWhere: string;
+function TQueryIntf<T>.GetCmdGroup: String;
 begin
-   result := FWhere;
+  result := FGroup;
 end;
 
-function TQueryIntf.MoveBy(Distance: Integer): Integer;
+function TQueryIntf<T>.GetCmdJoin: string;
 begin
-    result := inherited MoveBy(Distance);
-    if eof then
-      FScrollRow := -1;
+  result := FJoin;
 end;
 
-function TQueryIntf.MoveNext: boolean;
+function TQueryIntf<T>.GetCmdOrderBy: string;
 begin
-  if FScrollRow>=0 then
-     Next;
+  result := FOrderBy;
+end;
+
+function TQueryIntf<T>.GetCmdTable: string;
+begin
+  result := FTable;
+end;
+
+function TQueryIntf<T>.GetCmdWhere: string;
+begin
+  result := FWhere;
+end;
+
+function TQueryIntf<T>.MoveBy(Distance: integer): integer;
+begin
+  result := FDataset.MoveBy(Distance);
+  if eof then
+    FScrollRow := -1;
+end;
+
+function TQueryIntf<T>.MoveNext: boolean;
+begin
+  if FScrollRow >= 0 then
+    Next;
   inc(FScrollRow);
   result := not eof;
 end;
 
-class function TQueryIntf.New: IQuery;
+class function TQueryIntf<T>.New: IQuery;
 begin
-   result := TDataStorageRec.NewQuery();
+  result := TQueryIntf<T>.create(nil) as IQuery;
 end;
 
-
-class function TQueryIntf.New(
-  const AConnection: TFDCustomConnection): IQuery;
+class function TQueryIntf<T>.New(ADataset: T): IQuery;
 begin
-  result := TDataStorageRec.newQuery();
-  result.SetConnectionIntf(AConnection);
-
+  result := TQueryIntf<T>.create(ADataset) as IQuery;
 end;
 
+class function TQueryIntf<T>.New(const AConnection
+  : TFDCustomConnection): IQuery;
+begin
+  result := New() as IQuery;
+  result.Dataset.Connection := AConnection;
+end;
 
-function TQueryIntf.NewQuery(const ATable, AFields, AWhere, AOrderBy,
+function TQueryIntf<T>.NewQuery(ATable, AFields, AWhere, AGroup, AOrderBy,
   AJoin: String): IQuery;
 begin
-  result := TDataStorageRec.NewQuery(ATable, AFields, AWhere,
-    AOrderBy, AJoin);
-  result.Connection := self.Connection;
+  result := New;
+  // TDataStorageRec.NewQuery(ATable, AFields, AWhere,AGroup, AOrderBy, AJoin);
+  result.CmdTable := ATable;
+  result.CmdWhere := AWhere;
+  result.CmdFields := AFields;
+  result.CmdJoin := AJoin;
+  result.CmdGroup := AGroup;
+  result.CmdOrderBy := AOrderBy;
+  result.Dataset.Connection := self.Dataset.Connection;
 end;
 
-function TQueryIntf.Open(const AProc: TProc<TFDParams>): IQuery;
+procedure TQueryIntf<T>.Next;
 begin
-     AProc(GetParams);
-     result := open;
+  FDataset.Next;
 end;
 
-function TQueryIntf.OrderBy(const Texto: string): IQuery;
+function TQueryIntf<T>.Open(const AProc: TProc<TFDParams>): IQuery;
 begin
-   result := self;
-   FOrderBy := texto;
-   RebuildSql;
+  AProc(GetParams);
+  result := self;
+  FDataset.Open;
 end;
 
-function TQueryIntf.OrWhere(const texto: string):IQuery;
+function TQueryIntf<T>.OrderBy(const texto: string): IQuery;
 begin
-   result := self;
-   if FWhere <>'' then
-      FWhere := FWhere + ' or ';
-   FWhere := FWhere + texto;
-   RebuildSql;
+  result := self;
+  FOrderBy := texto;
+  RebuildSql;
+end;
+
+function TQueryIntf<T>.OrWhere(const texto: string): IQuery;
+begin
+  result := self;
+  if FWhere <> '' then
+    FWhere := FWhere + ' or ';
+  FWhere := FWhere + texto;
+  RebuildSql;
 
 end;
 
-function TQueryIntf.paramValue(const nome: string; valor: variant): IQuery;
-var prm:TFDParam;
+function TQueryIntf<T>.ParamValue(const nome: string; valor: variant): IQuery;
+var
+  prm: TFDParam;
 begin
-   result := self;
-   prm := FindParam(nome);
-   if prm<>nil then
-     prm.Value := valor;
+  result := self;
+  prm := FDataset.FindParam(nome);
+  if prm <> nil then
+    prm.Value := valor;
 end;
 
-function TQueryIntf.RebuildSql:IQuery;
+procedure TQueryIntf<T>.post;
 begin
-   result := self;
-   SetCommand( TDataStorageRec.SqlBuilder(FTable,FFieldNames,FWhere,FOrderBy,FJoin ));
+  FDataset.post;
 end;
 
-function TQueryIntf.RecordCountInt: integer;
+procedure TQueryIntf<T>.Prior;
 begin
-  result := inherited RecordCount;
+  FDataset.Prior;
 end;
 
-function TQueryIntf.Open: IQuery;
+function TQueryIntf<T>.RebuildSql: IQuery;
 begin
-  inherited Open;
+  result := self;
+  SetCommand(TDataStorageRec.SqlBuilder(FTable, FFieldNames, FWhere, FGroup,
+    FOrderBy, FJoin));
+end;
+
+function TQueryIntf<T>.RecordCountInt: integer;
+begin
+  result := FDataset.RecordCount;
+end;
+
+procedure TQueryIntf<T>.Reset;
+begin
+
+end;
+
+function TQueryIntf<T>.Open: IQuery;
+begin
+  FDataset.Open;
   FScrollRow := -1;
   result := self as IQuery;
 end;
 
-procedure TQueryIntf.reset;
+procedure TQueryIntf<T>.SetActiveQuery(const Value: boolean);
 begin
-  InternalFirst;
+  FDataset.Active := Value;
 end;
 
-function TQueryIntf.Rollback:IQuery;
+procedure TQueryIntf<T>.SetCommand(const ACommand: string);
 begin
-  result := self;
-  Connection.Rollback;
+  FDataset.sql.Text := ACommand;
 end;
 
-procedure TQueryIntf.SetActiveQuery(const Value: boolean);
+procedure TQueryIntf<T>.SetConnectionIntf(const AConn: TFDCustomConnection);
 begin
-   inherited active := Value;
+  FDataset.Connection := AConn;
 end;
 
-procedure TQueryIntf.SetCommand(const ACommand: string);
+procedure TQueryIntf<T>.SetDataset(Const ADataset: TFDQuery);
 begin
-  sql.Text := ACommand;
+  if FFreeOnDestroy and (not ADataset.Equals(FDataset)) then
+    FreeAndNil(FDataset);
+
+  FDataset := T(ADataset);
+  FFreeOnDestroy := false;
 end;
 
-procedure TQueryIntf.SetConnectionIntf(const AConn: TFDCustomConnection);
-begin
-  inherited Connection := AConn;
-end;
-
-procedure TQueryIntf.SetFieldByName(const AField: string;
+procedure TQueryIntf<T>.SetFieldByName(const AField: string;
   const AValue: variant);
 begin
-  inherited fieldByName(AField).Value := AValue;
+  FDataset.FieldByName(AField).Value := AValue;
 end;
 
-procedure TQueryIntf.SetCmdWhere(const Value: string);
+procedure TQueryIntf<T>.SetFreeOnDestroy(const Value: boolean);
 begin
-   FWhere := Value;
-   RebuildSql;
+  FFreeOnDestroy := Value;
 end;
 
-procedure TQueryIntf.SetCmdFiedls(const Value: string);
+procedure TQueryIntf<T>.SetCmdWhere(const Value: string);
+begin
+  FWhere := Value;
+  RebuildSql;
+end;
+
+procedure TQueryIntf<T>.SetCmdFiedls(const Value: string);
 begin
   FFieldNames := Value;
   RebuildSql;
 end;
 
-procedure TQueryIntf.SetCmdJoin(const Value: string);
+procedure TQueryIntf<T>.SetCmdGroup(const Value: String);
+begin
+  FGroup := Value;
+  RebuildSql;
+end;
+
+procedure TQueryIntf<T>.SetCmdJoin(const Value: string);
 begin
   FJoin := Value;
   RebuildSql;
 end;
 
-procedure TQueryIntf.SetCmdOrderBy(const Value: string);
+procedure TQueryIntf<T>.SetCmdOrderBy(const Value: string);
 begin
   FOrderBy := Value;
   RebuildSql;
 end;
 
-procedure TQueryIntf.SetCmdTable(const Value: string);
+procedure TQueryIntf<T>.SetCmdTable(const Value: string);
 begin
   FTable := Value;
   RebuildSql;
 end;
 
-function TQueryIntf.StartTransaction:IQuery;
+function TQueryIntf<T>.StartTransaction: IQuery;
 begin
   result := self;
-  Connection.StartTransaction;
+  FDataset.Connection.StartTransaction;
 end;
 
-function TQueryIntf.Table(const texto: string): IQuery;
+function TQueryIntf<T>.Table(const texto: string): IQuery;
 begin
-   result := self;
-   FTable := texto;
-   RebuildSql;
+  result := self;
+  FTable := texto;
+  RebuildSql;
 end;
 
-function TQueryIntf.Where(const texto: string):IQuery;
+function TQueryIntf<T>.ToJson: string;
+var
+  Intf: IJsonDataset;
 begin
-   result := self;
-   FWhere := texto;
-   RebuildSql;
+  if supports(FDataset, IJsonDataset, Intf) then
+    result := (Intf).ToJson
+  else
+    result := '{ }';
+end;
+
+function TQueryIntf<T>.Where(const texto: string): IQuery;
+begin
+  result := self;
+  FWhere := texto;
+  RebuildSql;
 end;
 
 { TStoreDataStorage }
 
 class function TDataStorageRec.NewQuery: IQuery;
 begin
-  result := TQueryIntf.Create(nil) as IQuery;
+  result := TQueryIntf<TFDQuery>.create(nil) as IQuery;
 end;
 
-
-
-class function TDataStorageRec.NewQuery(const Conn:TFDCustomConnection): IQuery;
+class function TDataStorageRec.NewQuery(const Conn
+  : TFDCustomConnection): IQuery;
 begin
-   result :=  TDataStorageRec.NewQuery();
-   result.Connection := Conn;
+  result := TDataStorageRec.NewQuery();
+  result.Dataset.Connection := Conn;
 end;
 
-class function TDataStorageRec.NewQuery(const ATable, AFields, AWhere,
+class function TDataStorageRec.NewQuery(const ATable, AFields, AWhere, AGroup,
   AOrderBy, AJoin: String): IQuery;
 begin
-    result := NewQuery();
-    result.Table(ATable)
-          .where(AWhere)
-          .OrderBy(AOrderBy)
-          .Join(AJoin)
-          .FieldNames(AFields);
+  result := NewQuery();
+  result.Table(ATable).Where(AWhere).OrderBy(AOrderBy).Join(AJoin)
+    .FieldNames(AFields);
+  result.GroupBy(AGroup);
+
 end;
 
-
-class function TDataStorageRec.SqlBuilder(const ATable, AFields, AWhere,
+class function TDataStorageRec.SqlBuilder(const ATable, AFields, AWhere, AGroup,
   AOrderBy, AJoin: String): string;
 var
   sql: TStringBuilder;
 begin
-  sql := TStringBuilder.Create;
+  sql := TStringBuilder.create;
   try
-    if ATable<>'' then
+    if ATable <> '' then
       sql.Append('select ' + AFields + ' from ' + ATable);
     if AJoin <> '' then
       sql.Append(' ' + AJoin);
     if AWhere <> '' then
       sql.Append(' where ' + AWhere);
+    if AGroup <> '' then
+      sql.Append(' group by ' + AGroup);
     if AOrderBy <> '' then
       sql.Append(' order by ' + AOrderBy);
     result := sql.ToString;
@@ -689,48 +854,43 @@ end;
 
 { TDatabaseIntf }
 
+(*
 
-function TDatabaseIntf.Close: IDatabase;
-begin
-   result := self;
-   inherited Close;
-end;
+  function TDatabaseIntf.ConnectName(ADBname: string): IDatabase;
+  begin
+  result := self;
+  FDatabase.ConnectionName:=ADBname;
+  end;
 
-function TDatabaseIntf.ConnectName(ADBname: string): IDatabase;
-begin
-   result := self;
-   inherited ConnectionName:=ADBname;
-end;
+  function TDatabaseIntf.Driver(ADriver: string): IDatabase;
+  begin
+  result := self;
+  inherited driverName := ADriver;
+  end;
 
-function TDatabaseIntf.Driver(ADriver: string): IDatabase;
-begin
-    result := self;
-    inherited driverName := ADriver;
-end;
+  function TDatabaseIntf.LoginParam(AUser, APass: String): IDatabase;
+  begin
+  result := self
+  .ParamValue('USER_NAME',AUser)
+  .ParamValue('Password',APass);
+  end;
 
-function TDatabaseIntf.LoginParam(AUser, APass: String): IDatabase;
-begin
-   result := self
-   .ParamValue('USER_NAME',AUser)
-   .ParamValue('Password',APass);
-end;
+  class function TDatabaseIntf.new: IDatabase;
+  begin
 
-class function TDatabaseIntf.new: IDatabase;
-begin
+  result := TDatabaseIntf.Create(nil) as IDatabase;
+  end;
 
-    result := TDatabaseIntf.Create(nil) as IDatabase;
-end;
+  function TDatabaseIntf.IOpen: IDatabase;
+  begin
+  result := self;
+  inherited Open;
+  end;
 
-function TDatabaseIntf.Open: IDatabase;
-begin
-    result := self;
-    inherited Open;
-end;
-
-function TDatabaseIntf.ParamValue(sParam: string; value: variant): IDatabase;
-begin
-    result := self;
-    Params.Values[sParam] := value;
-end;
-
+  function TDatabaseIntf.ParamValue(sParam: string; value: variant): IDatabase;
+  begin
+  result := self;
+  Params.Values[sParam] := value;
+  end;
+*)
 end.
