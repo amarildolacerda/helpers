@@ -1,3 +1,27 @@
+{***************************************************************************}
+{                                                                           }
+{                                                                           }
+{           Copyright (C) Amarildo Lacerda                                  }
+{                                                                           }
+{           https://github.com/amarildolacerda                              }
+{                                                                           }
+{                                                                           }
+{***************************************************************************}
+{                                                                           }
+{  Licensed under the Apache License, Version 2.0 (the "License");          }
+{  you may not use this file except in compliance with the License.         }
+{  You may obtain a copy of the License at                                  }
+{                                                                           }
+{      http://www.apache.org/licenses/LICENSE-2.0                           }
+{                                                                           }
+{  Unless required by applicable law or agreed to in writing, software      }
+{  distributed under the License is distributed on an "AS IS" BASIS,        }
+{  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. }
+{  See the License for the specific language governing permissions and      }
+{  limitations under the License.                                           }
+{                                                                           }
+{***************************************************************************}
+
 unit storeware.IdZeroConf;
 
 interface
@@ -12,6 +36,7 @@ Type
 
   TIdZeroConfBase = class(TComponent)
   private
+    FDefaultPort:Word;
     FUDPServer: TIdUDPServer;
     FzeroConfType: TIdZeroConfType;
     FAppDefaultPort: word;
@@ -68,7 +93,9 @@ Type
   TIdZeroConfClient = class(TIdZeroConfBase)
   private
     FServerPort: word;
+    FBroadcastIP: string;
     procedure SetServerPort(const Value: word);
+    procedure SetBroadcastIP(const Value: string);
   public
     // envia para o servidor perguntando onde ele esta.
     procedure Send;
@@ -76,6 +103,7 @@ Type
   published
     // porta do servidor para onde ira enviar a mensagem de broadcast
     property ServerPort: word read FServerPort write SetServerPort;
+    property BroadcastIP:string read FBroadcastIP write SetBroadcastIP;
     // porta para onde o cliente esta escutando para pegar a resposta do servidor
     property ClientPort: word read GetDefaultPort write SetDefaultPort;
     property OnResponseEvent: TIdZeroConfEvent read GetOnResponse
@@ -196,7 +224,7 @@ end;
 
 function TIdZeroConfBase.GetDefaultPort: word;
 begin
-  result := FUDPServer.DefaultPort;
+  result := FDefaultPort;
 end;
 
 function TIdZeroConfBase.GetLocalHost: string;
@@ -219,7 +247,11 @@ end;
 procedure TIdZeroConfBase.SetActive(const Value: boolean);
 begin
   if FUDPServer.Active <> Value then
+  begin
+    if value then
+      FUDPServer.DefaultPort := FDefaultPort;
     FUDPServer.Active := Value;
+  end;
 end;
 
 procedure TIdZeroConfBase.SetAppDefaultHost(const Value: string);
@@ -239,7 +271,7 @@ end;
 
 procedure TIdZeroConfBase.SetDefaultPort(const Value: word);
 begin
-  FUDPServer.DefaultPort := Value;
+  FDefaultPort := Value;
 end;
 
 procedure TIdZeroConfBase.SetOnResponse(const Value: TIdZeroConfEvent);
@@ -268,19 +300,55 @@ begin
   SetzeroConfType(zctClient);
 end;
 
+{
+function FormatBroadcastIP(AIP:string):String;
+var i,n:integer;
+begin
+   result := '';
+   if AIP='' then exit;
+   n := 0;
+   for I := low(AIP) to High(AIP) do
+       begin
+         if AIP[I]='.' then
+         begin
+            inc(n);
+            if n=3 then
+               begin
+                 result := result+'.0';
+                 exit;
+               end;
+         end else
+           result := result + AIP[i];
+       end;
+end;
+}
+
 procedure TIdZeroConfClient.Send;
 var
   AJson: TJsonObject;
+  AIP:string;
 begin
-  FLocalHost := GStack.LocalAddress;
+  AIP:= FBroadcastIP;
+
+  // prepara ip para broadcast
+  //AIP  := formatBroadcastIP(FBroadcastIP);       // nao funcionou
+
+  GetLocalHost;
   AJson := CreatePayload('ping', '');
   try
     AJson.AddPair('client', TJSONNumber.create(ClientPort));
+    if not active then
+       active := true;
     // passa para o servidor onde o cliente esta escutando
-    Broadcast(AJson.ToString, FServerPort); // envia os dados para o servidor
+    FUDPServer.Broadcast(AJson.ToString, FServerPort,AIP); // envia os dados para o servidor
   finally
     AJson.Free;
   end;
+end;
+
+procedure TIdZeroConfClient.SetBroadcastIP(const Value: string);
+begin
+  FBroadcastIP := Value;
 end;
 
 procedure TIdZeroConfClient.SetServerPort(const Value: word);
