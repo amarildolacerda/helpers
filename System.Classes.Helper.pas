@@ -77,6 +77,8 @@ Type
       write SetProperties;
     procedure GetPropertiesList(AList: TStrings;
       const AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
+    procedure GetPropertiesItems(AList: TStrings;
+      const AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
 
     function FieldsCount: Integer;
     function FieldName(idx: Integer): string;
@@ -109,6 +111,8 @@ Type
   end;
 
 implementation
+
+uses System.DateUtils;
 
 class procedure TObjectHelper.Using<T>(O: T; Proc: TProc<T>);
 var
@@ -252,6 +256,116 @@ begin
   finally
     aCtx.Free;
   end;
+end;
+
+type
+  // Adiciona funções ao TValue
+  TValueHelper = record helper for TValue
+  private
+    function IsNumeric: Boolean;
+    function IsFloat: Boolean;
+    function AsFloat: Extended;
+    function IsBoolean: Boolean;
+    function IsDate: Boolean;
+    function IsDateTime: Boolean;
+    function IsDouble: Boolean;
+    function AsDouble: Double;
+    function IsInteger: Boolean;
+  end;
+
+function TValueHelper.IsNumeric: Boolean;
+begin
+  Result := Kind in [tkInteger, tkChar, tkEnumeration, tkFloat,
+    tkWChar, tkInt64];
+end;
+
+function TValueHelper.IsFloat: Boolean;
+begin
+  Result := Kind = tkFloat;
+end;
+
+function TValueHelper.AsFloat: Extended;
+begin
+  Result := AsType<Extended>;
+end;
+
+function TValueHelper.IsBoolean: Boolean;
+begin
+  Result := TypeInfo = System.TypeInfo(Boolean);
+end;
+
+function TValueHelper.IsDate: Boolean;
+begin
+  Result := TypeInfo = System.TypeInfo(TDate);
+end;
+
+function TValueHelper.IsDateTime: Boolean;
+begin
+  Result := TypeInfo = System.TypeInfo(TDatetime);
+end;
+
+function TValueHelper.IsDouble: Boolean;
+begin
+  Result := TypeInfo = System.TypeInfo(Double);
+end;
+
+function TValueHelper.AsDouble: Double;
+begin
+  Result := AsType<Double>;
+end;
+
+function TValueHelper.IsInteger: Boolean;
+begin
+  Result := TypeInfo = System.TypeInfo(integer);
+end;
+
+function ISODateTimeToString(ADateTime: TDatetime): string;
+var
+  fs: TFormatSettings;
+begin
+  fs.TimeSeparator := ':';
+  Result := FormatDateTime('yyyy-mm-dd hh:nn:ss', ADateTime, fs);
+end;
+
+function ISOStrToDateTime(DateTimeAsString: string): TDatetime;
+begin
+  Result := EncodeDateTime(StrToInt(Copy(DateTimeAsString, 1, 4)),
+    StrToInt(Copy(DateTimeAsString, 6, 2)),
+    StrToInt(Copy(DateTimeAsString, 9, 2)),
+    StrToInt(Copy(DateTimeAsString, 12, 2)),
+    StrToInt(Copy(DateTimeAsString, 15, 2)),
+    StrToInt(Copy(DateTimeAsString, 18, 2)), 0);
+end;
+
+procedure TObjectHelper.GetPropertiesItems(AList: TStrings;
+  const AVisibility: TMemberVisibilitySet);
+var
+  aCtx: TRttiContext;
+  aProperty: TRttiProperty;
+  aRtti: TRttiType;
+  AValue: TValue;
+begin
+  AList.clear;
+  aCtx := TRttiContext.Create;
+  try
+    aRtti := aCtx.GetType(self.ClassType);
+    for aProperty in aRtti.GetProperties do
+    begin
+      if aProperty.Visibility in AVisibility then
+      begin
+        AValue := aProperty.GetValue(self);
+        if AValue.IsDate or AValue.IsDateTime then
+          AList.Add(aProperty.Name + '=' + ISODateTimeToString(AValue.AsDouble))
+        else if AValue.IsBoolean then
+          AList.Add(aProperty.Name + '=' + ord(AValue.AsBoolean).ToString)
+        else
+          AList.Add(aProperty.Name + '=' + AValue.ToString);
+      end;
+    end;
+  finally
+    aCtx.free;
+  end;
+
 end;
 
 procedure TObjectHelper.GetPropertiesList(AList: TStrings;
