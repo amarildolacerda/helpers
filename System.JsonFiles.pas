@@ -22,13 +22,12 @@
 { }
 { *************************************************************************** }
 
-
 unit System.JsonFiles;
 
 interface
 
-uses System.Classes, System.SysUtils, System.Rtti, System.Json, Rest.Json,
-  System.iniFiles;
+uses System.Classes, System.SysUtils, System.Rtti, System.Json, {Rest.Json,}
+  System.TypInfo;
 
 type
   TMemJsonFiles = class
@@ -40,10 +39,10 @@ type
     FModified: boolean;
     procedure SetAutoSave(const Value: boolean);
     procedure SetModified(const Value: boolean);
-    procedure WriteValue(const Section, Ident: string; Value: TValue);
-    function ReadValue(const Section, Ident: string;
-  Default: Variant): Variant;
   protected
+    // base
+    procedure WriteValue(const Section, Ident: string; Value: TValue);virtual;
+    function ReadValue(const Section, Ident: string; Default: Variant): Variant;virtual;
     procedure LoadValues; virtual;
   public
 
@@ -79,12 +78,19 @@ type
     function ReadFloat(const Section, Ident: string; Default: double)
       : double; virtual;
 
+    // RTTI
+    procedure ReadObject(const ASection: string; AObj: TObject);
+    procedure WriteObject(const ASection: string; AObj: TObject);
+
     procedure Clear;
     procedure UpdateFile; virtual;
     property Modified: boolean read FModified write SetModified;
     property AutoSave: boolean read FAutoSave write SetAutoSave;
+
+    // Json
     function ToJson: string;
     procedure FromJson(AJson: string);
+
   published
   end;
 
@@ -109,24 +115,19 @@ type
     function IsDate: boolean;
     function IsDateTime: boolean;
     function IsBoolean: boolean;
+    function AsDouble: double;
+    function IsFloat: boolean;
+    function AsFloat: Extended;
   end;
 
-function ISODateTimeToString(ADateTime: TDateTime): string;
-var
-  fs: TFormatSettings;
+function ISODateTimeToString(ADateTime: TDateTime):string;
 begin
-  fs.TimeSeparator := ':';
-  Result := FormatDateTime('yyyy-mm-dd hh:nn:ss', ADateTime, fs);
+   result := DateToISO8601(ADateTime);
 end;
 
 function ISOStrToDateTime(DateTimeAsString: string): TDateTime;
 begin
-  Result := EncodeDateTime(StrToInt(Copy(DateTimeAsString, 1, 4)),
-    StrToInt(Copy(DateTimeAsString, 6, 2)),
-    StrToInt(Copy(DateTimeAsString, 9, 2)),
-    StrToInt(Copy(DateTimeAsString, 12, 2)),
-    StrToInt(Copy(DateTimeAsString, 15, 2)),
-    StrToInt(Copy(DateTimeAsString, 18, 2)), 0);
+    TryISO8601ToDate(DateTimeAsString,result);
 end;
 
 function TValueHelper.IsNumeric: boolean;
@@ -193,12 +194,91 @@ begin
   FModified := false;
 end;
 
+function TValueHelper.AsDouble: double;
+begin
+  Result := AsType<double>;
+end;
+
+function TValueHelper.IsFloat: boolean;
+begin
+  Result := Kind = tkFloat;
+end;
+
+function TValueHelper.AsFloat: Extended;
+begin
+  Result := AsType<Extended>;
+end;
+
+procedure TMemJsonFiles.WriteObject(const ASection: string; AObj: TObject);
+var
+  aCtx: TRttiContext;
+  AFld: TRttiProperty;
+  AValue: TValue;
+begin
+  aCtx := TRttiContext.Create;
+  try
+    for AFld in aCtx.GetType(AObj.ClassType).GetProperties do
+    begin
+      if AFld.Visibility in [mvPublic] then
+      begin
+        AValue := AFld.GetValue(AObj);
+        if AValue.IsDate or AValue.IsDateTime then
+          WriteString(ASection, AFld.Name, ISODateTimeToString(AValue.AsDouble))
+        else if AValue.IsBoolean then
+          WriteBool(ASection, AFld.Name, AValue.AsBoolean)
+        else if AValue.IsInteger then
+          WriteInteger(ASection, AFld.Name, AValue.AsInteger)
+        else if AValue.IsFloat or AValue.IsNumeric then
+          WriteFloat(ASection, AFld.Name, AValue.AsFloat)
+        else
+          WriteString(ASection, AFld.Name, AValue.ToString);
+      end;
+    end;
+  finally
+    aCtx.Free;
+  end;
+end;
+
+procedure TMemJsonFiles.ReadObject(const ASection: string; AObj: TObject);
+var
+  aCtx: TRttiContext;
+  AFld: TRttiProperty;
+  AValue, ABase: TValue;
+begin
+  aCtx := TRttiContext.Create;
+  try
+    for AFld in aCtx.GetType(AObj.ClassType).GetProperties do
+    begin
+      if AFld.Visibility in [mvPublic] then
+      begin
+        ABase := AFld.GetValue(AObj);
+        AValue := AFld.GetValue(AObj);
+        if ABase.IsDate or ABase.IsDateTime then
+          AValue := ISOStrToDateTime(ReadString(ASection, AFld.Name,
+            ISODateTimeToString(ABase.AsDouble)))
+        else if ABase.IsBoolean then
+          AValue := ReadBool(ASection, AFld.Name, ABase.AsBoolean)
+        else if ABase.IsInteger then
+          AValue := ReadInteger(ASection, AFld.Name, ABase.AsInteger)
+        else if ABase.IsFloat or ABase.IsNumeric then
+          AValue := ReadFloat(ASection, AFld.Name, ABase.AsFloat)
+        else
+          AValue := ReadString(ASection, AFld.Name, ABase.asString);
+        AFld.SetValue(AObj, AValue);
+      end;
+    end;
+  finally
+    aCtx.Free;
+  end;
+end;
+
 procedure TMemJsonFiles.LoadValues;
 var
   Size: Integer;
   Buffer: TBytes;
   Stream: TFileStream;
 begin
+  // copy from Ssytem.IniFiles .TIniFiles (embarcadero)
   try
     if (FileName <> '') and FileExists(FileName) then
     begin
@@ -280,7 +360,7 @@ end;
 function TMemJsonFiles.ReadDatetime(const Section, Ident: string;
   Default: TDateTime): TDateTime;
 var
-  v: variant;
+  v: Variant;
 begin
   Result := Default;
   v := ReadValue(Section, Ident, ISODateTimeToString(Default));
@@ -294,7 +374,7 @@ var
 begin
   Result := Default;
   v := ReadValue(Section, Ident, Default);
- Result := StrToFloatDef(v, 0);
+  Result := StrToFloatDef(v, 0);
 end;
 
 function TMemJsonFiles.ReadInteger(const Section, Ident: string;
@@ -356,9 +436,9 @@ function TMemJsonFiles.ReadString(const Section, Ident,
 var
   v: Variant;
 begin
-  result := Default;
+  Result := Default;
   v := ReadValue(Section, Ident, Default);
-    Result := v;
+  Result := v;
 end;
 
 function TMemJsonFiles.ReadValue(const Section, Ident: string;
@@ -367,7 +447,7 @@ var
   j: TJsonObject;
   v: TJsonValue;
 begin
-  result := Default;
+  Result := Default;
   j := ReadSection(Section);
   if not assigned(j) then
     exit;
@@ -422,7 +502,7 @@ var
     else if Value.IsBoolean then
       AArray.AddPair(Ident, TJSONBool.Create(Value.AsBoolean))
     else
-      AArray.AddPair(Ident, Value.AsString)
+      AArray.AddPair(Ident, Value.asString)
   end;
 
 begin
