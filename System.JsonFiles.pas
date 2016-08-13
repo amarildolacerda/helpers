@@ -41,8 +41,9 @@ type
     procedure SetModified(const Value: boolean);
   protected
     // base
-    procedure WriteValue(const Section, Ident: string; Value: TValue);virtual;
-    function ReadValue(const Section, Ident: string; Default: Variant): Variant;virtual;
+    procedure WriteValue(const Section, Ident: string; Value: TValue); virtual;
+    function ReadValue(const Section, Ident: string; Default: Variant)
+      : Variant; virtual;
     procedure LoadValues; virtual;
   public
 
@@ -77,6 +78,8 @@ type
       : TDateTime; virtual;
     function ReadFloat(const Section, Ident: string; Default: double)
       : double; virtual;
+    procedure DeleteKey(const Section, Ident: String); virtual;
+    procedure EraseSection(const Section: string); virtual;
 
     // RTTI
     procedure ReadObject(const ASection: string; AObj: TObject);
@@ -99,6 +102,7 @@ type
 
 implementation
 
+// System.IniFiles
 uses System.DateUtils;
 { TMemJsonFiles }
 
@@ -120,40 +124,40 @@ type
     function AsFloat: Extended;
   end;
 
-function ISODateTimeToString(ADateTime: TDateTime):string;
+function ISODateTimeToString(ADateTime: TDateTime): string;
 begin
-   result := DateToISO8601(ADateTime);
+  result := DateToISO8601(ADateTime);
 end;
 
 function ISOStrToDateTime(DateTimeAsString: string): TDateTime;
 begin
-    TryISO8601ToDate(DateTimeAsString,result);
+  TryISO8601ToDate(DateTimeAsString, result);
 end;
 
 function TValueHelper.IsNumeric: boolean;
 begin
-  Result := Kind in [tkInteger, tkChar, tkEnumeration, tkFloat,
+  result := Kind in [tkInteger, tkChar, tkEnumeration, tkFloat,
     tkWChar, tkInt64];
 end;
 
 function TValueHelper.IsBoolean: boolean;
 begin
-  Result := TypeInfo = System.TypeInfo(boolean);
+  result := TypeInfo = System.TypeInfo(boolean);
 end;
 
 function TValueHelper.IsInteger: boolean;
 begin
-  Result := TypeInfo = System.TypeInfo(Integer);
+  result := TypeInfo = System.TypeInfo(Integer);
 end;
 
 function TValueHelper.IsDate: boolean;
 begin
-  Result := TypeInfo = System.TypeInfo(TDate);
+  result := TypeInfo = System.TypeInfo(TDate);
 end;
 
 function TValueHelper.IsDateTime: boolean;
 begin
-  Result := TypeInfo = System.TypeInfo(TDateTime);
+  result := TypeInfo = System.TypeInfo(TDateTime);
 end;
 
 procedure TMemJsonFiles.Clear;
@@ -179,12 +183,30 @@ begin
 
 end;
 
+procedure TMemJsonFiles.DeleteKey(const Section, Ident: String);
+var
+  sec: TJsonObject;
+begin
+  sec := ReadSection(Section);
+  if assigned(sec) then
+  begin
+    sec.RemovePair(Ident);
+    FModified := true;
+  end;
+end;
+
 destructor TMemJsonFiles.Destroy;
 begin
   if AutoSave and Modified then
     UpdateFile;
   FJson.Free;
   inherited;
+end;
+
+procedure TMemJsonFiles.EraseSection(const Section: string);
+begin
+  FJson.RemovePair(Section);
+  FModified := true;
 end;
 
 procedure TMemJsonFiles.FromJson(AJson: string);
@@ -196,17 +218,17 @@ end;
 
 function TValueHelper.AsDouble: double;
 begin
-  Result := AsType<double>;
+  result := AsType<double>;
 end;
 
 function TValueHelper.IsFloat: boolean;
 begin
-  Result := Kind = tkFloat;
+  result := Kind = tkFloat;
 end;
 
 function TValueHelper.AsFloat: Extended;
 begin
-  Result := AsType<Extended>;
+  result := AsType<Extended>;
 end;
 
 procedure TMemJsonFiles.WriteObject(const ASection: string; AObj: TObject);
@@ -315,7 +337,7 @@ end;
 
 function TMemJsonFiles.ToJson: string;
 begin
-  Result := FJson.ToJson;
+  result := FJson.ToJson;
 end;
 
 procedure TMemJsonFiles.UpdateFile;
@@ -362,9 +384,9 @@ function TMemJsonFiles.ReadDatetime(const Section, Ident: string;
 var
   v: Variant;
 begin
-  Result := Default;
+  result := Default;
   v := ReadValue(Section, Ident, ISODateTimeToString(Default));
-  Result := ISOStrToDateTime(v);
+  result := ISOStrToDateTime(v);
 end;
 
 function TMemJsonFiles.ReadFloat(const Section, Ident: string;
@@ -372,9 +394,9 @@ function TMemJsonFiles.ReadFloat(const Section, Ident: string;
 var
   v: Variant;
 begin
-  Result := Default;
+  result := Default;
   v := ReadValue(Section, Ident, Default);
-  Result := StrToFloatDef(v, 0);
+  result := StrToFloatDef(v, 0);
 end;
 
 function TMemJsonFiles.ReadInteger(const Section, Ident: string;
@@ -383,18 +405,18 @@ var
   v: Variant;
 begin
   v := ReadValue(Section, Ident, Default);
-  Result := StrToIntDef(v, 0);
+  result := StrToIntDef(v, 0);
 end;
 
 function TMemJsonFiles.ReadSection(const Section: string): TJsonObject;
 var
   v: TJsonValue;
 begin
-  Result := nil;
+  result := nil;
   v := nil;
   FJson.TryGetValue<TJsonValue>(Section, v);
   if assigned(v) then
-    Result := v as TJsonObject;
+    result := v as TJsonObject;
 end;
 
 procedure TMemJsonFiles.ReadSections(Strings: TStrings);
@@ -411,8 +433,8 @@ end;
 function TMemJsonFiles.ReadSectionJsonValue(const Section: TJsonObject;
   Ident: string): TJsonValue;
 begin
-  Result := nil;
-  Section.TryGetValue<TJsonValue>(Ident, Result);
+  result := nil;
+  Section.TryGetValue<TJsonValue>(Ident, result);
 end;
 
 procedure TMemJsonFiles.ReadSectionValues(const Section: string;
@@ -436,9 +458,9 @@ function TMemJsonFiles.ReadString(const Section, Ident,
 var
   v: Variant;
 begin
-  Result := Default;
+  result := Default;
   v := ReadValue(Section, Ident, Default);
-  Result := v;
+  result := v;
 end;
 
 function TMemJsonFiles.ReadValue(const Section, Ident: string;
@@ -447,7 +469,7 @@ var
   j: TJsonObject;
   v: TJsonValue;
 begin
-  Result := Default;
+  result := Default;
   j := ReadSection(Section);
   if not assigned(j) then
     exit;
@@ -455,13 +477,13 @@ begin
   v := j.Find(Ident);
   if not assigned(v) then
     exit;
-  Result := v.Value;
+  result := v.Value;
 
 end;
 
 procedure TMemJsonFiles.WriteBool(const Section, Ident: string; Value: boolean);
 begin
-  WriteValue(Section, Ident, TJSONBool.Create(Value).ToString);
+  WriteValue(Section, Ident, value);
 end;
 
 procedure TMemJsonFiles.WriteDateTime(const Section, Ident: string;
@@ -472,7 +494,7 @@ end;
 
 procedure TMemJsonFiles.WriteFloat(const Section, Ident: string; Value: double);
 begin
-  WriteValue(Section, Ident, TJSONNumber.Create(Value).ToString);
+  WriteValue(Section, Ident, value);
 end;
 
 procedure TMemJsonFiles.WriteInteger(const Section, Ident: string;
@@ -497,10 +519,10 @@ var
       AArray.AddPair(Ident, TJSONNumber.Create(Value.AsInteger))
     else if Value.IsDate or Value.IsDateTime then
       AArray.AddPair(Ident, ISODateTimeToString(Value.AsExtended))
-    else if Value.IsNumeric then
-      AArray.AddPair(Ident, TJSONNumber.Create(Value.AsExtended))
     else if Value.IsBoolean then
       AArray.AddPair(Ident, TJSONBool.Create(Value.AsBoolean))
+    else if Value.IsNumeric then
+      AArray.AddPair(Ident, TJSONNumber.Create(Value.AsExtended))
     else
       AArray.AddPair(Ident, Value.asString)
   end;
@@ -528,7 +550,7 @@ end;
 
 function TJsonObjectHelper.Find(Section: string): TJsonValue;
 begin
-  Result := FindValue(Section);
+  result := FindValue(Section);
 end;
 
 end.
