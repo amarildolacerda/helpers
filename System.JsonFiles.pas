@@ -30,7 +30,7 @@ uses System.Classes, System.SysUtils, System.Rtti, System.Json, {Rest.Json,}
   System.TypInfo;
 
 type
-  TMemJsonFiles = class
+  TMemJsonFile = class
   private
     FEncoding: TEncoding;
     FFileName: string;
@@ -97,7 +97,7 @@ type
   published
   end;
 
-  TJsonFiles = class(TMemJsonFiles)
+  TJsonFile = class(TMemJsonFile)
   end;
 
 implementation
@@ -160,18 +160,18 @@ begin
   result := TypeInfo = System.TypeInfo(TDateTime);
 end;
 
-procedure TMemJsonFiles.Clear;
+procedure TMemJsonFile.Clear;
 begin
   FreeAndNil(FJson);
   FJson := TJsonObject.Create;
 end;
 
-constructor TMemJsonFiles.Create(AFilename: string);
+constructor TMemJsonFile.Create(AFilename: string);
 begin
   Create(AFilename, nil);
 end;
 
-constructor TMemJsonFiles.Create(const AFilename: string;
+constructor TMemJsonFile.Create(const AFilename: string;
   const AEncoding: TEncoding);
 begin
   inherited Create;
@@ -183,7 +183,7 @@ begin
 
 end;
 
-procedure TMemJsonFiles.DeleteKey(const Section, Ident: String);
+procedure TMemJsonFile.DeleteKey(const Section, Ident: String);
 var
   sec: TJsonObject;
 begin
@@ -195,7 +195,7 @@ begin
   end;
 end;
 
-destructor TMemJsonFiles.Destroy;
+destructor TMemJsonFile.Destroy;
 begin
   if AutoSave and Modified then
     UpdateFile;
@@ -203,13 +203,13 @@ begin
   inherited;
 end;
 
-procedure TMemJsonFiles.EraseSection(const Section: string);
+procedure TMemJsonFile.EraseSection(const Section: string);
 begin
   FJson.RemovePair(Section);
   FModified := true;
 end;
 
-procedure TMemJsonFiles.FromJson(AJson: string);
+procedure TMemJsonFile.FromJson(AJson: string);
 begin
   FreeAndNil(FJson);
   FJson := TJsonObject.ParseJSONValue(AJson) as TJsonObject;
@@ -231,7 +231,7 @@ begin
   result := AsType<Extended>;
 end;
 
-procedure TMemJsonFiles.WriteObject(const ASection: string; AObj: TObject);
+procedure TMemJsonFile.WriteObject(const ASection: string; AObj: TObject);
 var
   aCtx: TRttiContext;
   AFld: TRttiProperty;
@@ -261,7 +261,7 @@ begin
   end;
 end;
 
-procedure TMemJsonFiles.ReadObject(const ASection: string; AObj: TObject);
+procedure TMemJsonFile.ReadObject(const ASection: string; AObj: TObject);
 var
   aCtx: TRttiContext;
   AFld: TRttiProperty;
@@ -294,7 +294,7 @@ begin
   end;
 end;
 
-procedure TMemJsonFiles.LoadValues;
+procedure TMemJsonFile.LoadValues;
 var
   Size: Integer;
   Buffer: TBytes;
@@ -325,22 +325,22 @@ begin
   end;
 end;
 
-procedure TMemJsonFiles.SetAutoSave(const Value: boolean);
+procedure TMemJsonFile.SetAutoSave(const Value: boolean);
 begin
   FAutoSave := Value;
 end;
 
-procedure TMemJsonFiles.SetModified(const Value: boolean);
+procedure TMemJsonFile.SetModified(const Value: boolean);
 begin
   FModified := Value;
 end;
 
-function TMemJsonFiles.ToJson: string;
+function TMemJsonFile.ToJson: string;
 begin
   result := FJson.ToJson;
 end;
 
-procedure TMemJsonFiles.UpdateFile;
+procedure TMemJsonFile.UpdateFile;
 var
   List: TStringList;
 begin
@@ -354,7 +354,7 @@ begin
   Modified := false;
 end;
 
-procedure TMemJsonFiles.ReadSection(const Section: string; Strings: TStrings);
+procedure TMemJsonFile.ReadSection(const Section: string; Strings: TStrings);
 var
   sec: TJsonObject;
   v: TJsonPair;
@@ -370,7 +370,7 @@ begin
 
 end;
 
-function TMemJsonFiles.ReadBool(const Section, Ident: string;
+function TMemJsonFile.ReadBool(const Section, Ident: string;
   Default: boolean): boolean;
 var
   j: TJsonObject;
@@ -379,7 +379,7 @@ begin
 
 end;
 
-function TMemJsonFiles.ReadDatetime(const Section, Ident: string;
+function TMemJsonFile.ReadDatetime(const Section, Ident: string;
   Default: TDateTime): TDateTime;
 var
   v: Variant;
@@ -389,7 +389,7 @@ begin
   result := ISOStrToDateTime(v);
 end;
 
-function TMemJsonFiles.ReadFloat(const Section, Ident: string;
+function TMemJsonFile.ReadFloat(const Section, Ident: string;
   Default: double): double;
 var
   v: Variant;
@@ -399,7 +399,7 @@ begin
   result := StrToFloatDef(v, 0);
 end;
 
-function TMemJsonFiles.ReadInteger(const Section, Ident: string;
+function TMemJsonFile.ReadInteger(const Section, Ident: string;
   Default: Integer): Integer;
 var
   v: Variant;
@@ -408,7 +408,7 @@ begin
   result := StrToIntDef(v, 0);
 end;
 
-function TMemJsonFiles.ReadSection(const Section: string): TJsonObject;
+function TMemJsonFile.ReadSection(const Section: string): TJsonObject;
 var
   v: TJsonValue;
 begin
@@ -419,7 +419,7 @@ begin
     result := v as TJsonObject;
 end;
 
-procedure TMemJsonFiles.ReadSections(Strings: TStrings);
+procedure TMemJsonFile.ReadSections(Strings: TStrings);
 var
   v: TJsonPair;
 begin
@@ -430,14 +430,14 @@ begin
   end;
 end;
 
-function TMemJsonFiles.ReadSectionJsonValue(const Section: TJsonObject;
+function TMemJsonFile.ReadSectionJsonValue(const Section: TJsonObject;
   Ident: string): TJsonValue;
 begin
   result := nil;
   Section.TryGetValue<TJsonValue>(Ident, result);
 end;
 
-procedure TMemJsonFiles.ReadSectionValues(const Section: string;
+procedure TMemJsonFile.ReadSectionValues(const Section: string;
   Strings: TStrings);
 var
   v: TJsonPair;
@@ -453,7 +453,7 @@ begin
   end;
 end;
 
-function TMemJsonFiles.ReadString(const Section, Ident,
+function TMemJsonFile.ReadString(const Section, Ident,
   Default: string): string;
 var
   v: Variant;
@@ -463,7 +463,7 @@ begin
   result := v;
 end;
 
-function TMemJsonFiles.ReadValue(const Section, Ident: string;
+function TMemJsonFile.ReadValue(const Section, Ident: string;
   Default: Variant): Variant;
 var
   j: TJsonObject;
@@ -481,35 +481,35 @@ begin
 
 end;
 
-procedure TMemJsonFiles.WriteBool(const Section, Ident: string; Value: boolean);
+procedure TMemJsonFile.WriteBool(const Section, Ident: string; Value: boolean);
 begin
   WriteValue(Section, Ident, value);
 end;
 
-procedure TMemJsonFiles.WriteDateTime(const Section, Ident: string;
+procedure TMemJsonFile.WriteDateTime(const Section, Ident: string;
   Value: TDateTime);
 begin
   WriteValue(Section, Ident, ISODateTimeToString(Value));
 end;
 
-procedure TMemJsonFiles.WriteFloat(const Section, Ident: string; Value: double);
+procedure TMemJsonFile.WriteFloat(const Section, Ident: string; Value: double);
 begin
   WriteValue(Section, Ident, value);
 end;
 
-procedure TMemJsonFiles.WriteInteger(const Section, Ident: string;
+procedure TMemJsonFile.WriteInteger(const Section, Ident: string;
   Value: Integer);
 begin
   WriteValue(Section, Ident, Value);
 end;
 
-procedure TMemJsonFiles.WriteString(const Section, Ident: string;
+procedure TMemJsonFile.WriteString(const Section, Ident: string;
   Value: string);
 begin
   WriteValue(Section, Ident, Value);
 end;
 
-procedure TMemJsonFiles.WriteValue(const Section, Ident: string; Value: TValue);
+procedure TMemJsonFile.WriteValue(const Section, Ident: string; Value: TValue);
 var
   AArray: TJsonObject;
   AValue: TJsonValue;
