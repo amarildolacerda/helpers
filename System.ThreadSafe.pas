@@ -26,7 +26,7 @@ unit System.ThreadSafe;
 
 interface
 
-uses Classes, System.Generics.Collections;
+uses Classes, System.Generics.Collections, System.Json;
 
 type
 
@@ -106,7 +106,9 @@ type
     function IndexOf(AValue: T): integer;
     procedure Delete(AIndex: integer);
     procedure Remove(AValue: T);
-    function Add: T; overload;
+    function Add: T; overload; virtual;
+    function ToJson: string; overload;
+    function ToJsonArray: TJsonArray;
   end;
 
   TThreadSafeInterfaceList<T: IInterface> = class(TObjectLock)
@@ -130,6 +132,8 @@ type
   end;
 
 implementation
+
+uses REST.Json;
 
 constructor TThreadSafeStringList.create;
 begin
@@ -447,7 +451,8 @@ end;
 
 function TThreadSafeObjectList<T>.Add: T;
 begin
-  result := T(FItemClass.create);
+  result := T(FItemClass.NewInstance);
+  Add(result);
 end;
 
 procedure TThreadSafeObjectList<T>.Clear;
@@ -538,6 +543,36 @@ begin
   with LockList do
     try
       FList.Items[AIndex] := AValue;
+    finally
+      UnlockList;
+    end;
+end;
+
+function TThreadSafeObjectList<T>.ToJson: string;
+var
+  j: TJsonArray;
+begin
+  j := self.ToJsonArray;
+  try
+    result := j.ToJson;
+  finally
+    j.Free;
+  end;
+end;
+
+function TThreadSafeObjectList<T>.ToJsonArray: TJsonArray;
+var
+  i: integer;
+  ob: T;
+begin
+  result := TJsonArray.create;
+  with LockList do
+    try
+      for i := 0 to Count - 1 do
+      begin
+        ob := Items[i];
+        result.Add(TJson.ObjectToJsonObject(ob));
+      end;
     finally
       UnlockList;
     end;

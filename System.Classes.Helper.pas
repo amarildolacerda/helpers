@@ -25,7 +25,7 @@ unit System.Classes.Helper;
 
 interface
 
-uses System.Classes, System.SysUtils, System.Rtti, System.TypInfo;
+uses System.Classes, System.SysUtils, System.Rtti, System.TypInfo, System.Json;
 
 Type
 
@@ -70,6 +70,13 @@ Type
       overload; static;
     class procedure Synchronize(Proc: TProc); overload; static;
 
+
+    // JSON
+    function ToJson:string; overload;
+    function ToJsonObject:TJsonObject;overload;
+    procedure FromJson(AJson:string);overload;
+    class function FromJson<T:Class, constructor>(AJson:string):T;overload;static;
+
     // RTTI
     function PropertyCount: Integer;
     function PropertyName(idx: Integer): string;
@@ -112,7 +119,7 @@ Type
 
 implementation
 
-uses System.DateUtils;
+uses System.DateUtils,  REST.Json;
 
 class procedure TObjectHelper.Using<T>(O: T; Proc: TProc<T>);
 var
@@ -174,6 +181,18 @@ begin
   finally
     aCtx.Free;
   end;
+end;
+
+procedure TObjectHelper.FromJson(AJson:string);
+var oJs:TJsonObject;
+begin
+   oJs:=TJsonObject.ParseJSONValue(AJson) as TJSONObject ;
+   TJson.JsonToObject(self,oJs);
+end;
+
+class function TObjectHelper.FromJson<T>(AJson: string): T;
+begin
+   result := TJson.JsonToObject<T>(AJson);
 end;
 
 function TObjectHelper.GetFields(AName: string): TValue;
@@ -549,6 +568,16 @@ begin
     begin
       Proc(O);
     end);
+end;
+
+function TObjectHelper.toJson: string;
+begin         // System.uJson
+   result := TJson.ObjectToJsonString(self);
+end;
+
+function TObjectHelper.ToJsonObject: TJsonObject;
+begin
+   result := TJson.ObjectToJsonObject(self);
 end;
 
 class function TObjectHelper.Anonymous<T>(O: T; Proc: TProc<T>): TObject;
