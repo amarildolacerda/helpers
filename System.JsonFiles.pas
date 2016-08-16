@@ -98,6 +98,9 @@ type
   end;
 
   TJsonFile = class(TMemJsonFile)
+  protected
+    procedure UpdateFile;override;
+    procedure LoadValues;override;
   end;
 
 implementation
@@ -216,6 +219,10 @@ begin
   FModified := false;
 end;
 
+procedure TMemJsonFile.LoadValues;
+begin
+end;
+
 function TValueHelper.AsDouble: double;
 begin
   result := AsType<double>;
@@ -294,7 +301,7 @@ begin
   end;
 end;
 
-procedure TMemJsonFile.LoadValues;
+procedure TJsonFile.LoadValues;
 var
   Size: Integer;
   Buffer: TBytes;
@@ -341,6 +348,11 @@ begin
 end;
 
 procedure TMemJsonFile.UpdateFile;
+begin
+
+end;
+
+procedure TJsonFile.UpdateFile;
 var
   List: TStringList;
 begin
