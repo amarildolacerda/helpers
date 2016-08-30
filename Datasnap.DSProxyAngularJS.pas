@@ -30,7 +30,7 @@
 }
 
 (*
-  //  Angular example (assync way):
+  //  Angular sample (assync way):
   //  for:     ../Product/Item/1
   //
   //     $Datasnap.Product.Item( function (result ) {
@@ -423,19 +423,6 @@ begin
   WriteJSLine('     return true; // already logged in');
   WriteJSLine
     ('   connectionInfo.authentication = convertStringToBase64(user + ":" + password);');
-  WriteJSLine
-    ('   var testCreds = new DSAdmin(connectionInfo).GetPlatformName();');
-  WriteJSLine('');
-  WriteJSLine('   if ( testCreds != null && testCreds.result != null )');
-  WriteJSLine('   {');
-  WriteJSLine
-    ('     AdminInst = new ServerFunctionExecutor("DSAdmin", connectionInfo);');
-  WriteJSLine('     return true;');
-  WriteJSLine('   }');
-  WriteJSLine('   else');
-  WriteJSLine('   {');
-  WriteJSLine('     return false;');
-  WriteJSLine('   }');
   WriteJSLine('}');
 
   WriteJSLine('');
@@ -451,6 +438,9 @@ begin
   WriteJSLine('');
 
   WriteJSLine('function datasnapSend(callback, $http, options) {');
+  WriteJSLine('  if (connectionInfo.authentication != null)');
+  WriteJSLine('      $http.defaults.headers.common[''Authorization''] = ''Basic ''+connectionInfo.authentication;');
+
   WriteJSLine('$http(options).success(function (results) {');
   WriteJSLine
     ('    if (callback != null) { if (results.error == null) { callback(results); } else { angular_error(results); } }');
