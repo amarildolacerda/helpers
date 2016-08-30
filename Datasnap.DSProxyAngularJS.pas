@@ -10,8 +10,8 @@
 { }
 { HowTo (Servidor Datasanap - Delphi):
   //   1. include UNIT in an USES of project (where exists a TDSProxyGenerator)
-  //      Auto-registro da classe necess·ria para o Framework;
-  //   2. para gerar o cÛdigo AngularJS, (pode usar o evento create)
+  //      Auto-registro da classe necess√°ria para o Framework;
+  //   2. para gerar o c√≥digo AngularJS, (pode usar o evento create)
   //      trocar a propriedade:
   //         DSProxyGenerator1.Writer := sAngularJSRESTProxyWriter;
 
@@ -22,7 +22,7 @@
   //         DSProxyGenerator1.Write;
 
   HowTo (AngularJS):
-  //  1. n„o h· necessidade de incluir no angular.module - o cÛdigo gerado j·
+  //  1. n√£o h√° necessidade de incluir no angular.module - o c√≥digo gerado j√°
   //     faz isto automaticamente. (will create a service angular like)
   //  2. declarando o factory no Controller:  (on controller)
   //     app.controller('productController', function productController(...$Datasnap,....) { ....
@@ -30,7 +30,7 @@
 }
 
 (*
-  //  Angular example (assync way):
+  //  Angular fragmt sample (assync way):
   //  for:     ../Product/Item/1
   //
   //     $Datasnap.Product.Item( function (result ) {
