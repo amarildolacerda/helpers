@@ -449,8 +449,11 @@ begin
   WriteJSLine('});};');
 
   WriteJSLine('function datasnapCreateURL(AClass, AMethod, AParams) {');
-  WriteJSLine
-    ('  rst =  connectionInfo.host + '':'' + connectionInfo.port + datasnapURLPath + AClass + ''/'' + AMethod ;');
+  WriteJSLine('    rst = connectionInfo.host;');
+  WriteJSLine('  if (connectionInfo.port!=null)');
+  WriteJSLine('     rst += '':'' + connectionInfo.port;');
+  WriteJSLine('  rst += datasnapURLPath + AClass + ''/'' + AMethod;');
+
   WriteJSLine('  AParams.forEach(function (v) {');
   WriteJSLine('      rst += ''/'' + v;');
   WriteJSLine('  })');
