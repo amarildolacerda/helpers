@@ -117,6 +117,14 @@ Type
     property MaxThread: Integer read FMaxThread write SetMaxThread;
   end;
 
+
+  {
+  TCollectionHelper = Class Helper for TCollection
+      public
+        function ToJson:string;virtual;
+  end;
+  }
+
 implementation
 
 uses System.DateUtils,  REST.Json;
@@ -303,11 +311,6 @@ begin
   Result := Kind = tkFloat;
 end;
 
-function TValueHelper.AsFloat: Extended;
-begin
-  Result := AsType<Extended>;
-end;
-
 function TValueHelper.IsBoolean: Boolean;
 begin
   Result := TypeInfo = System.TypeInfo(Boolean);
@@ -328,32 +331,29 @@ begin
   Result := TypeInfo = System.TypeInfo(Double);
 end;
 
-function TValueHelper.AsDouble: Double;
-begin
-  Result := AsType<Double>;
-end;
-
 function TValueHelper.IsInteger: Boolean;
 begin
   Result := TypeInfo = System.TypeInfo(integer);
 end;
 
-function ISODateTimeToString(ADateTime: TDatetime): string;
-var
-  fs: TFormatSettings;
+function TValueHelper.AsFloat: Extended;
 begin
-  fs.TimeSeparator := ':';
-  Result := FormatDateTime('yyyy-mm-dd hh:nn:ss', ADateTime, fs);
+  Result := AsType<Extended>;
 end;
 
-function ISOStrToDateTime(DateTimeAsString: string): TDatetime;
+function TValueHelper.AsDouble: Double;
 begin
-  Result := EncodeDateTime(StrToInt(Copy(DateTimeAsString, 1, 4)),
-    StrToInt(Copy(DateTimeAsString, 6, 2)),
-    StrToInt(Copy(DateTimeAsString, 9, 2)),
-    StrToInt(Copy(DateTimeAsString, 12, 2)),
-    StrToInt(Copy(DateTimeAsString, 15, 2)),
-    StrToInt(Copy(DateTimeAsString, 18, 2)), 0);
+  Result := AsType<Double>;
+end;
+
+function ISODateTimeToString(ADateTime: TDateTime): string;
+begin
+  result := DateToISO8601(ADateTime);
+end;
+
+function ISOStrToDateTime(DateTimeAsString: string): TDateTime;
+begin
+  TryISO8601ToDate(DateTimeAsString, result);
 end;
 
 procedure TObjectHelper.GetPropertiesItems(AList: TStrings;
@@ -627,4 +627,20 @@ begin
   FMaxThread := Value;
 end;
 
+{ TCollectionHelper }
+{
+function TCollectionHelper.ToJson: string;
+var j:TJsonArray;
+    i:integer;
+begin
+    j := TJsonArray.Create;
+    try
+      for I := 0 to count-1 do
+          j.AddElement( TJson.ObjectToJsonObject(  items[i] )   );
+      result := j.ToJSON;
+    finally
+      j.Free;
+    end;
+end;
+}
 end.
