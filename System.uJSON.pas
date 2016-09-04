@@ -85,6 +85,7 @@ type
     function AsPair: TJsonPair;
     function Datatype: TJsonType;
     function asObject: TJSONObject;
+    function AsInteger:Integer;
   end;
 
   TJSONPairHelper = class helper for TJsonPair
@@ -623,6 +624,11 @@ end;
 function TJSONValueHelper.AsArray: TJSONArray;
 begin
   result := self as TJSONArray;
+end;
+
+function TJSONValueHelper.AsInteger: Integer;
+begin
+  TryGetValue<integer>(result);
 end;
 
 function TJSONValueHelper.asObject: TJSONObject;
