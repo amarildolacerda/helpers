@@ -25,7 +25,8 @@
 
 
 {
-
+  25/09/2016
+  AL - Torna publico procedure para QrCodeToCanvas
 
 
 
@@ -74,6 +75,10 @@ Type
     property Datafield: string read FDatafield write SetDatafield;
     property Dataset: TDataset read FDataset write SetDataset;
   end;
+
+procedure QrCodeToCanvas(AWidth, AHeight: integer; ATexto: String;
+  ACanvas: TCanvas);
+
 
 procedure Register;
 
