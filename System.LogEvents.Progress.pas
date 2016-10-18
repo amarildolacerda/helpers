@@ -100,11 +100,13 @@ type
     lblErro: TLabel;
     lbTimer: TLabel;
     cbRolarLista: TCheckBox;
+    Bevel1: TBevel;
     procedure FormCreate(sender: TObject);
     procedure FormDestroy(sender: TObject);
     procedure SpeedButton1Click(sender: TObject);
     procedure FormCloseQuery(sender: TObject; var CanClose: Boolean);
     procedure lblErroClick(sender: TObject);
+    procedure FormClose(sender: TObject; var Action: TCloseAction);
   private
     FStopwatch: TStopwatch;
     FTerminated, FAutoDeleteFinished: Boolean;
@@ -116,6 +118,7 @@ type
     FMaxThreads: Integer;
     FCanCancel: Boolean;
     { Private declarations }
+    procedure SetTerminated(const Value: Boolean);
     procedure DoProgressEvent(sender: TObject; ATipo: TLogEventType;
       msg: string; APosition: double);
     procedure DoErro(sender: TObject; msg: string);
@@ -293,8 +296,12 @@ end;
 
 procedure TProgressEvents.DoAllFinished(sender: TObject);
 begin
-  WaitForAll(1000);
-  DoProgress(sender, 0, etAllFinished, '');
+  WaitForAll(100);
+  try
+    DoProgress(sender, 0, etAllFinished, '');
+    SetTerminated(true);
+  except
+  end;
 end;
 
 procedure TProgressEvents.DoErro(sender: TObject; msg: string);
@@ -305,6 +312,8 @@ end;
 procedure TProgressEvents.DoProgress(sender: TObject; identific: Integer;
 ATipo: TLogEventType; msg: string; APosition: double; nInteracoes: Integer);
 begin
+  if Terminated then
+    exit;
   LogEvents.DoProgress(sender, identific, ATipo, msg, APosition, nInteracoes);
 end;
 
@@ -321,7 +330,7 @@ begin
     begin
       if TThread.CurrentThread.CheckTerminated then
       begin
-        FTerminated := true;
+        SetTerminated(true);
         exit;
       end;
       TThread.Queue(nil,
@@ -330,57 +339,61 @@ begin
           i: Integer;
           sFinished, sCanceled: string;
         begin
-          lock;
           try
-
-            if ATipo = etAllFinished then
-            begin
-              SpeedButton1.Enabled := true;
-              SpeedButton1.tag := 0;
-              WaitForAll(100);
-              SpeedButton1.caption := 'OK';
-              UpdatePosition;
-            end
-            else
-            begin
-              if msg = '' then
-                exit;
-              ValueListEditor1.FindRow(msg, i);
-              if i < 0 then
+            if Terminated then
+              exit;
+            lock;
+            try
+              if ATipo = etAllFinished then
               begin
-                if ATipo = etFinished then
-                  exit; // foi retirado da lista... (item velhoo)...
-
-                CheckMax(1);
-                i := ValueListEditor1.InsertRow(msg, '...', true);
-                if cbRolarLista.checked then
-                  ValueListEditor1.Perform(WM_VSCROLL, SB_BOTTOM, 0);
+                SpeedButton1.Enabled := true;
+                SpeedButton1.tag := 0;
+                WaitForAll(100);
+                SpeedButton1.caption := 'OK';
                 UpdatePosition;
-              end;
-              sFinished := TLogEventTypeNames[ord(etFinished)];
-              sCanceled := TLogEventTypeNames[ord(etCanceled)];
-              case ATipo of
-                etCanceled:
-                  if (ValueListEditor1.Cells[1, i] <> sCanceled) and
-                    (ValueListEditor1.Cells[1, i] <> sFinished) then
-                  begin
-                    ValueListEditor1.Cells[1, i] := sCanceled;
-                    incPos(1);
-                  end;
-                etFinished:
-                  if ValueListEditor1.Cells[1, i] <> sFinished then
-                  begin
-                    ValueListEditor1.Cells[1, i] := sFinished;
-                    incPos(1);
-                  end;
+              end
               else
-                if ValueListEditor1.Cells[1, i] <> sFinished then
-                  ValueListEditor1.Cells[1, i] := TLogEventTypeNames
-                    [ord(ATipo)];
+              begin
+                if msg = '' then
+                  exit;
+                ValueListEditor1.FindRow(msg, i);
+                if i < 0 then
+                begin
+                  if ATipo = etFinished then
+                    exit; // foi retirado da lista... (item velhoo)...
+
+                  CheckMax(1);
+                  i := ValueListEditor1.InsertRow(msg, '...', true);
+                  if cbRolarLista.checked then
+                    ValueListEditor1.Perform(WM_VSCROLL, SB_BOTTOM, 0);
+                  UpdatePosition;
+                end;
+                sFinished := TLogEventTypeNames[ord(etFinished)];
+                sCanceled := TLogEventTypeNames[ord(etCanceled)];
+                case ATipo of
+                  etCanceled:
+                    if (ValueListEditor1.Cells[1, i] <> sCanceled) and
+                      (ValueListEditor1.Cells[1, i] <> sFinished) then
+                    begin
+                      ValueListEditor1.Cells[1, i] := sCanceled;
+                      incPos(1);
+                    end;
+                  etFinished:
+                    if ValueListEditor1.Cells[1, i] <> sFinished then
+                    begin
+                      ValueListEditor1.Cells[1, i] := sFinished;
+                      incPos(1);
+                    end;
+                else
+                  if ValueListEditor1.Cells[1, i] <> sFinished then
+                    ValueListEditor1.Cells[1, i] := TLogEventTypeNames
+                      [ord(ATipo)];
+                end;
               end;
+            finally
+              Unlock;
             end;
-          finally
-            Unlock;
+          except
           end;
         end);
     end).start;
@@ -403,6 +416,7 @@ begin
     LogEvents.register(self, DoErro, AIdentProcess);
   end;
 
+  Clear;
   FStopwatch := TStopwatch.StartNew;
 
   if ACaption <> '' then
@@ -419,10 +433,19 @@ begin
 
 end;
 
+procedure TProgressEvents.FormClose(sender: TObject; var Action: TCloseAction);
+begin
+
+  SetTerminated(true);
+  WaitFor(1000);
+  Action := TCloseAction.caFree;
+end;
+
 procedure TProgressEvents.FormCloseQuery(sender: TObject;
 var CanClose: Boolean);
 begin
-  FTerminated := true;
+  SetTerminated(true);
+  CanClose := true;
 end;
 
 procedure TProgressEvents.FormCreate(sender: TObject);
@@ -486,26 +509,36 @@ begin
         var
           i, n: Integer;
         begin
-          lock;
           try
-            // apaga os concluidos mais velhos para liberar recursos
-            n := 0;
-            for i := ValueListEditor1.RowCount - 1 downto 0 do
-            begin
-              if (TLogEventTypeNames[ord(etFinished)] = ValueListEditor1.Values
-                [ValueListEditor1.Keys[i]]) or
-                (TLogEventTypeNames[ord(etCanceled)] = ValueListEditor1.Values
-                [ValueListEditor1.Keys[i]]) then
+            if Terminated then
+              exit;
+            lock;
+            try
+              // apaga os concluidos mais velhos para liberar recursos
+              n := 0;
+              for i := ValueListEditor1.RowCount - 1 downto 2 do
               begin
-                inc(n);
-                if n > 5 then
-                begin
-                  ValueListEditor1.DeleteRow(i);
+                if Terminated then
+                  exit;
+                try
+                  if (TLogEventTypeNames[ord(etFinished)
+                    ] = ValueListEditor1.Values[ValueListEditor1.Keys[i]]) or
+                    (TLogEventTypeNames[ord(etCanceled)
+                    ] = ValueListEditor1.Values[ValueListEditor1.Keys[i]]) then
+                  begin
+                    inc(n);
+                    if n > 5 then
+                    begin
+                      ValueListEditor1.DeleteRow(i);
+                    end;
+                  end;
+                except
                 end;
               end;
+            finally
+              Unlock;
             end;
-          finally
-            Unlock;
+          except
           end;
         end);
     end).start;
@@ -569,6 +602,16 @@ begin
   FMaxThreads := Value;
 end;
 
+procedure TProgressEvents.SetTerminated(const Value: Boolean);
+begin
+  lock;
+  try
+    FTerminated := true;
+  finally
+    Unlock;
+  end;
+end;
+
 procedure TProgressEvents.SetText(const Value: string);
 begin
   TThread.synchronize(nil,
@@ -585,7 +628,7 @@ end;
 
 procedure TProgressEvents.SpeedButton1Click(sender: TObject);
 begin
-  FTerminated := true;
+  SetTerminated(true);
   Close;
 end;
 
@@ -618,21 +661,26 @@ begin
           n: Integer;
           x: double;
         begin
-          lock;
           try
-            lbPosition.caption := '';
-            n := ValueListEditor1.Strings.Count;
-            t := FMax;
-            if (t = 0) or (t < n) then
-            begin
-              t := n;
-              FMax := n;
+            if Terminated then
+              exit;
+            lock;
+            try
+              lbPosition.caption := '';
+              n := ValueListEditor1.Strings.Count;
+              t := FMax;
+              if (t = 0) or (t < n) then
+              begin
+                t := n;
+                FMax := n;
+              end;
+              lbPosition.caption := intToStr(FPosition) + ' de ' + intToStr(t);
+              x := FStopwatch.Elapsed.TotalDays;
+              lbTimer.caption := TimeToStr(x);
+            finally
+              Unlock;
             end;
-            lbPosition.caption := intToStr(FPosition) + ' de ' + intToStr(t);
-            x := FStopwatch.Elapsed.TotalDays;
-            lbTimer.caption := TimeToStr(x);
-          finally
-            Unlock;
+          except
           end;
         end);
     end).start;
@@ -640,24 +688,30 @@ end;
 
 procedure TProgressEvents.WaitFor(const ASleep: Integer);
 begin
-  while Count > FMaxThreads do
-  begin
-    TThread.Sleep(ASleep);
-    Application.ProcessMessages;
-    if Terminated then
-      break;
+  try
+    while Count > FMaxThreads do
+    begin
+      TThread.sleep(ASleep);
+      Application.ProcessMessages;
+      if Terminated then
+        break;
+    end;
+  except
   end;
 end;
 
 procedure TProgressEvents.WaitForAll(const ASleep: Integer);
 begin
+ try
   while Count > 0 do
   begin
-    TThread.Sleep(ASleep);
+    TThread.sleep(ASleep);
     Application.ProcessMessages;
     if Terminated then
       break;
   end;
+ except
+ end;
 end;
 
 end.

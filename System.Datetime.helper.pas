@@ -134,6 +134,7 @@ implementation
 
 { TDateTimeHelper }
 
+
 function TDateTimeHelper.AddDays(const aNumberOfDays: Integer): TDateTime;
 begin
   Result := IncDay(Self, aNumberOfDays);
@@ -379,7 +380,7 @@ end;
 function TDateTimeHelper.ToString(const aFormatStr: string): string;
 begin
   if aFormatStr = '' then
-    Result := DateToStr(Self)
+    Result := DateTimeToStr(Self)
   else
     Result := FormatDateTime(aFormatStr, Self);
 end;

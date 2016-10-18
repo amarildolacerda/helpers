@@ -29,8 +29,13 @@ interface
 uses Classes, System.Generics.Collections, System.Json;
 
 type
+  IObjectLock = Interface
+    ['{172D89AE-268F-4312-BEF6-4F1A1B6A0F12}']
+    procedure Lock;
+    procedure UnLock;
+  End;
 
-  TObjectLock = class(TObject)
+  TObjectLock = class(TInterfacedObject,IObjectLock)
   private
     FLock: TObject;
   protected
@@ -61,19 +66,22 @@ type
     procedure SetValues(AName: string; const Value: String);
     function GetNames(AIndex: integer): String;
     procedure SetNames(AIndex: integer; const Value: String);
+    function GetValueFromIndex(idx: integer): string;
+    procedure SetValueFromIndex(idx: integer; const Value: string);
   public
     constructor create; override;
     destructor destroy; override;
     procedure Clear;
     function Count: integer;
-    function IndexOf(AText: string): integer;
-    function IndexOfName(AText: string): integer;
-    procedure Add(AText: string; ADupl: boolean = true);
-    procedure Delete(AIndex: integer);
-    procedure Remove(AText: string);
+    function IndexOf(const AText: string): integer;
+    function IndexOfName(const AText: string): integer;
+    procedure Add(const AText: string; const ADupl: boolean = true);
+    procedure Delete(const AIndex: integer);
+    procedure Remove(const AText: string);
     function LockList: TStringList;
     procedure UnlockList; inline;
-    property Items[AIndex: integer]: string read Getitems write Setitems;
+    property Items[AIndex: integer]: string read Getitems
+      write Setitems; default;
     property Delimiter: Char read GetDelimiter write SetDelimiter;
     property DelimitedText: string read GetDelimitedText write SetDelimitedText;
     function Text: string;
@@ -84,6 +92,8 @@ type
     procedure AddTo(AStrings: TStrings);
     property Values[AName: string]: String read GetValues write SetValues;
     property Names[AIndex: integer]: String read GetNames write SetNames;
+    property ValueFromIndex[idx: integer]: string read GetValueFromIndex
+      write SetValueFromIndex;
   end;
 
   TThreadSafeObjectList<T: Class> = class(TObjectLock)
@@ -102,7 +112,7 @@ type
     procedure Clear;
     function Add(AValue: T): integer; overload;
     function Count: integer;
-    property Items[AIndex: integer]: T read Getitems write Setitems;
+    property Items[AIndex: integer]: T read Getitems write Setitems; default;
     function IndexOf(AValue: T): integer;
     procedure Delete(AIndex: integer);
     procedure Remove(AValue: T);
@@ -153,7 +163,7 @@ begin
   result := FList;
 end;
 
-procedure TThreadSafeStringList.Remove(AText: string);
+procedure TThreadSafeStringList.Remove(const AText: string);
 var
   i: integer;
 begin
@@ -167,7 +177,8 @@ begin
   UnLock;
 end;
 
-procedure TThreadSafeStringList.Add(AText: string; ADupl: boolean = true);
+procedure TThreadSafeStringList.Add(const AText: string;
+  const ADupl: boolean = true);
 begin
   Lock;
   try
@@ -181,7 +192,7 @@ begin
   end;
 end;
 
-procedure TThreadSafeStringList.Delete(AIndex: integer);
+procedure TThreadSafeStringList.Delete(const AIndex: integer);
 begin
   try
     LockList.Delete(AIndex);
@@ -327,6 +338,16 @@ begin
 
 end;
 
+function TThreadSafeStringList.GetValueFromIndex(idx: integer): string;
+begin
+  with LockList do
+    try
+      result := ValueFromIndex[idx];
+    finally
+      UnlockList;
+    end;
+end;
+
 function TThreadSafeStringList.GetValues(AName: string): String;
 begin
   with LockList do
@@ -337,7 +358,7 @@ begin
     end;
 end;
 
-function TThreadSafeStringList.IndexOf(AText: string): integer;
+function TThreadSafeStringList.IndexOf(const AText: string): integer;
 begin
   with LockList do
     try
@@ -347,7 +368,7 @@ begin
     end;
 end;
 
-function TThreadSafeStringList.IndexOfName(AText: string): integer;
+function TThreadSafeStringList.IndexOfName(const AText: string): integer;
 begin
   try
     result := LockList.IndexOfName(AText);
@@ -363,6 +384,17 @@ begin
   finally
     UnlockList;
   end;
+end;
+
+procedure TThreadSafeStringList.SetValueFromIndex(idx: integer;
+  const Value: string);
+begin
+  with LockList do
+    try
+      ValueFromIndex[idx] := Value;
+    finally
+      UnlockList;
+    end;
 end;
 
 procedure TThreadSafeStringList.SetValues(AName: string; const Value: String);

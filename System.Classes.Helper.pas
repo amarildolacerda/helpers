@@ -82,6 +82,7 @@ Type
     function PropertyName(idx: Integer): string;
     property Properties[AName: string]: TValue read GetProperties
       write SetProperties;
+    function IsProperty(AName:String):boolean;
     procedure GetPropertiesList(AList: TStrings;
       const AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
     procedure GetPropertiesItems(AList: TStrings;
@@ -458,6 +459,13 @@ begin
     aMethod.Invoke(self, params);
   finally
   end;
+end;
+
+function TObjectHelper.IsProperty(AName: String): boolean;
+var v:TValue;
+begin
+   v := Properties[AName];
+   result := not v.IsEmpty;
 end;
 
 function TObjectHelper.PropertyCount: Integer;
