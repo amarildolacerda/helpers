@@ -12,7 +12,8 @@ library PluginExecuteSimple;
 
 uses
   System.SysUtils,
-  System.Classes;
+  System.Classes,
+  uExecutePluignSimple in 'uExecutePluignSimple.pas' {Form2};
 
 {$R *.res}
 

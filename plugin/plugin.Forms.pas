@@ -35,16 +35,19 @@ type
   protected
     FHandle:THandle;
     FIndex:integer;
+    FSubTypeID:Int64;
+  private
+    procedure SetSubTypeID(const Value: Int64);
   protected
     destructor Destroy; override;
     procedure SetForm(const Value: TForm); virtual;
     function GetForm(AParent: THandle): TForm; virtual;
     function GetCaption: string; virtual;
+    function GetSubTypeID: int64;virtual;
 
-    function GetHandle:THandle;
+    {function GetHandle:THandle;
     procedure SetHandle(AHandle:THandle);
-
-    function PluginIdent: int64; virtual;
+    }
     procedure Connect(AAlias: string; AUser: string; APass: string); virtual;
     procedure User(AFilial: integer; AAppUser: string); virtual;
     procedure Sync(AJson: string); virtual;
@@ -55,6 +58,7 @@ type
     function GetVersion: string; virtual;
     function GetDescription: string; virtual;
   public
+    property SubTypeID:Int64 read GetSubTypeID write SetSubTypeID;
   end;
 
   TPluginFormService = class(TPluginExecuteService)
@@ -130,11 +134,12 @@ begin
     WinApi.windows.SetParent(FForm.Handle, AParent);
 end;
 
+{
 function TPluginExecuteService.GetHandle: THandle;
 begin
    result := FHandle;
 end;
-
+}
 function TPluginExecuteService.GetName: string;
 begin
   result := 'Storeware';
@@ -145,9 +150,9 @@ begin
   result := '01.00';
 end;
 
-function TPluginExecuteService.PluginIdent: int64;
+function TPluginExecuteService.GetSubTypeID: int64;
 begin
-  result := 0;
+  result := FSubTypeID;
 end;
 
 procedure TPluginExecuteService.SetForm(const Value: TForm);
@@ -158,11 +163,16 @@ begin
   FForm := Value;
 end;
 
-procedure TPluginExecuteService.SetHandle(AHandle: THandle);
+procedure TPluginExecuteService.SetSubTypeID(const Value: Int64);
+begin
+  FSubTypeID := Value;
+end;
+
+{procedure TPluginExecuteService.SetHandle(AHandle: THandle);
 begin
    FHandle := AHandle;
 end;
-
+}
 procedure TPluginExecuteService.Sync(AJson: string);
 begin
   if not assigned(FForm) then

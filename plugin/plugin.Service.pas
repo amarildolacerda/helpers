@@ -35,10 +35,12 @@ unit Plugin.Service;
 
 interface
 
-uses VCL.Forms, VCL.Controls, Plugin.Interf, System.Generics.collections;
+uses WinApi.Windows, VCL.Forms, VCL.Controls, Plugin.Interf, System.Generics.collections;
 
 Type
   // List of plugins
+  TPluginItemsInterfacedClass = class of TPluginItemsInterfaced;
+
   TPluginItemsInterfaced = class(TInterfacedObject, IPluginItems)
   protected
     FItems: TList<IPluginInfo>;
@@ -48,26 +50,34 @@ Type
     function Count: integer;
     function GetItem(idx: integer): IPluginInfo;
     procedure Add(APlugin: IPluginInfo);
+    procedure Install; virtual;
+    procedure UnInstall; virtual;
+
   end;
 
   // plugin base
   TPluginService = class(TInterfacedObject, IPluginInfo)
+  private
+    FTypeID:Int64;
   protected
     FForm: TForm;
     FOwned: boolean;
+    procedure SetTypeID(const Value: Int64);virtual;
+    function GetTypeID: Int64; virtual;
   public
     constructor Create; overload;
     function GetAuthor: string; virtual;
     procedure DoStart; virtual;
     function GetInterface: IPluginExecuteBase; virtual;
     function PluginName: string; virtual;
-    function PluginAccess: Int64; virtual;
     procedure Embedded(const AParent: THandle); virtual;
     function CanClose: boolean; virtual;
+    property TypeID:Int64 read GetTypeID write SetTypeID;
   end;
 
   // register one plugin to list of plugins
 procedure RegisterPlugin(AInfo: IPluginInfo);
+procedure RegisterPluginClass(AClass: TPluginItemsInterfacedClass);
 
 // exported plugins from DLL
 // return list of plugins in DLL
@@ -75,7 +85,7 @@ function LoadPlugin(AAplication: IPluginApplication): IPluginItems;
 // exported unload plugins
 procedure UnloadPlugin;
 
-function GetPluginItems:TPluginItemsInterfaced;
+function GetPluginItems: TPluginItemsInterfaced;
 
 implementation
 
@@ -84,12 +94,19 @@ uses System.Classes, System.SysUtils;
 var
   LPlugin: TPluginItemsInterfaced;
   PluginService: IPluginInfo;
+  LPluginClass: TPluginItemsInterfacedClass;
 
-function GetPluginItems:TPluginItemsInterfaced;
+procedure RegisterPluginClass(AClass: TPluginItemsInterfacedClass);
 begin
-   result := LPlugin;
+  LPluginClass := AClass;
 end;
-  { TPluginService<T> }
+
+function GetPluginItems: TPluginItemsInterfaced;
+begin
+  result := LPlugin;
+end;
+
+{ TPluginService<T> }
 function TPluginService.GetAuthor: string;
 begin
   result := 'storeware';
@@ -97,10 +114,9 @@ end;
 
 function TPluginService.GetInterface: IPluginExecuteBase;
 begin
-  if Supports(FForm,IPluginExecuteBase) then
-  result := FForm as IPluginExecuteBase;
+  if Supports(FForm, IPluginExecuteBase) then
+    result := FForm as IPluginExecuteBase;
 end;
-
 
 procedure TPluginService.DoStart;
 begin
@@ -113,9 +129,14 @@ begin
     result := FForm.Caption;
 end;
 
-function TPluginService.PluginAccess: Int64;
+procedure TPluginService.SetTypeID(const Value: Int64);
 begin
-  result := 0;
+  FTypeID := Value;
+end;
+
+function TPluginService.GetTypeID: Int64;
+begin
+  result := FTypeID;
 end;
 
 function TPluginService.CanClose: boolean;
@@ -142,6 +163,7 @@ begin
   if not assigned(FForm) then
     exit;
 
+  winapi.windows.SetParent(FForm.Handle,AParent);
   FForm.BorderStyle := bsNone;
   FForm.Align := alClient;
   FForm.Show;
@@ -149,24 +171,25 @@ begin
 end;
 
 function LoadPlugin(AAplication: IPluginApplication): IPluginItems;
-var i:integer;
+var
+  i: integer;
 begin
   PluginApplication := AAplication;
   result := LPlugin;
-  for I := 0 to result.Count-1 do
-    result.GetItem(I).DoStart;
+  for i := 0 to result.Count - 1 do
+    result.GetItem(i).DoStart;
 end;
 
 procedure UnloadPlugin;
 begin
   LPlugin := nil;
-  //PluginApplication := nil;
+  // PluginApplication := nil;
 end;
 
 procedure RegisterPlugin(AInfo: IPluginInfo);
 begin
   if not assigned(LPlugin) then
-    LPlugin := TPluginItemsInterfaced.Create;
+    LPlugin := LPluginClass.Create;
   LPlugin.Add(AInfo);
 end;
 
@@ -210,6 +233,19 @@ begin
   result := FItems.Items[idx];
 end;
 
+procedure TPluginItemsInterfaced.Install;
+begin
+
+end;
+
+procedure TPluginItemsInterfaced.UnInstall;
+begin
+
+end;
+
 exports LoadPlugin, UnloadPlugin;
+
+initialization
+   RegisterPluginClass(TPluginItemsInterfaced);
 
 end.

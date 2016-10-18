@@ -92,7 +92,7 @@ begin
     .Filter(' DLL de Plugin (*.dll)|*.dll').Execute(
     procedure(arquivo: string)
     begin
-      if GetPluginManager.RegisterPlugin(arquivo) >= 0 then
+      if GetPluginManager.InstallPlugin(arquivo) >= 0 then
       begin
         CarregarLista;
       end;

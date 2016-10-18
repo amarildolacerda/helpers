@@ -25,7 +25,7 @@ implementation
 
 {$R *.dfm}
 
-uses plugin.Service, plugin.MenuItem;
+uses plugin.Service, plugin.MenuItem, plugin.Control;
 
 procedure TForm1.Button1Click(Sender: TObject);
 begin
@@ -36,6 +36,8 @@ end;
 initialization
 
 RegisterPlugin(TPluginMenuItemService.Create(TForm1, 'Menu base de sample'));
+RegisterPlugin(TPluginControlService.create(TForm1,1,0,'my control embbedded'));
+
 
 finalization
 

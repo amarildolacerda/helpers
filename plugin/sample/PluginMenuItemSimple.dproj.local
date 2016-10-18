@@ -1,11 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <BorlandProject>
-  <Transactions>
-    <Transaction>2016/10/16 22:06:29.061,C:\Fontes\plugin\sample\PluginMenuItemSimple.dproj=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Project5.dproj</Transaction>
-    <Transaction>2016/10/16 22:07:02.733,=C:\Fontes\plugin\sample\Unit1.pas</Transaction>
-    <Transaction>2016/10/16 22:07:24.684,C:\Fontes\plugin\sample\uMenuItemSimple.dfm=C:\Fontes\plugin\sample\Unit1.dfm</Transaction>
-    <Transaction>2016/10/16 22:07:24.684,C:\Fontes\plugin\sample\uMenuItemSimple.pas=C:\Fontes\plugin\sample\Unit1.pas</Transaction>
-    <Transaction>2016/10/16 23:53:24.015,=C:\Fontes\plugin\sample\Unit1.pas</Transaction>
-    <Transaction>2016/10/16 23:53:53.723,C:\Fontes\plugin\plugin.Control.pas=C:\Fontes\plugin\sample\Unit1.pas</Transaction>
+	<Transactions>
+    <Transaction>2016/10/16 22:06:29.000.061,C:\Users\amari\Documents\Embarcadero\Studio\Projects\Project5.dproj=C:\Fontes\plugin\sample\PluginMenuItemSimple.dproj</Transaction>
+    <Transaction>2016/10/16 22:07:02.000.733,=C:\Fontes\plugin\sample\Unit1.pas</Transaction>
+    <Transaction>2016/10/16 22:07:24.000.684,C:\Fontes\plugin\sample\Unit1.pas=C:\Fontes\plugin\sample\uMenuItemSimple.pas</Transaction>
+    <Transaction>2016/10/16 22:07:24.000.684,C:\Fontes\plugin\sample\Unit1.dfm=C:\Fontes\plugin\sample\uMenuItemSimple.dfm</Transaction>
+    <Transaction>2016/10/16 23:53:24.000.015,=C:\Fontes\plugin\sample\Unit1.pas</Transaction>
+    <Transaction>2016/10/16 23:53:53.000.723,C:\Fontes\plugin\sample\Unit1.pas=C:\Fontes\plugin\plugin.Control.pas</Transaction>
   </Transactions>
 </BorlandProject>

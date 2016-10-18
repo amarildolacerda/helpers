@@ -62,7 +62,8 @@ type
     function LoadPlugins(APath: string; AApplication: IPluginApplication)
       : Integer; overload;
     function LoadPlugins(AApplication: IPluginApplication): Integer; overload;
-    function RegisterPlugin(APlugin: string): Integer;
+    function InstallPlugin(APlugin: string): Integer;
+    procedure UnInstallPlugin(APlugin:string);
   end;
 
   TPluginManagerIntf = class(TInterfacedObject, IPluginManager)
@@ -81,18 +82,24 @@ type
     property Path: string read FPath write SetPath;
     function Count: Integer;
     function GetItem(idx: Integer): IPluginItems;
+    function Find(APlugin:string):TPluginInfo;
+    function IndexOf(APlugin:string):integer;
     function Add(AHandle: THandle; AFilename: String;
       APlugins: IPluginItems): Integer;
     function LoadPlugin(APlugin: string): Integer;
     function LoadPlugins(APath: string; AApplication: IPluginApplication)
       : Integer; overload;
     function LoadPlugins(AApplication: IPluginApplication): Integer; overload;
-    function RegisterPlugin(APlugin: string): Integer;
+
+    function InstallPlugin(APlugin: string): Integer;
+    procedure UnInstallPlugin(APlugin:string);
+
   end;
 
   TPluginAttributeControl = class
   public
-    Acesso: Int64;
+    TypeID: Int64;
+    SubTypeID:Int64;
     PluginExecute: IPluginExecute;
   end;
 
@@ -113,10 +120,14 @@ type
     procedure RegisterMenuItem(AMainMenu: TMainMenu; ADefaultMenu: TMenuItem;
       const APath, ACaption: string; ADoExecute: IPluginMenuItem;
       AProc: TProc<TObject>);
-    procedure RegisterAttributeControl(const AAcesso: Int64;
-      ADoExecute: IPluginExecute);
-    function LoadPlugins(APlugin: string): Integer;
-    function RegisterPlugin(APlugin: string): Integer;
+    procedure RegisterAttributeControl(const ATypeID,ASubTypeID: Int64;
+  ADoExecute: IPluginExecute);
+
+    procedure EmbbedControl(AParentHandle:THandle; AControlID:Int64;AControlType:Int64=0);virtual;
+
+    function LoadPlugins(APlugin: string): Integer; virtual;
+    function InstallPlugin(APlugin: string): Integer; virtual;
+    procedure UnInstallPlugin(APlugin:string);virtual;
     property Plugins: TPluginManagerIntf read FPlugins;
     property AttributeControls: TObjectList<TPluginAttributeControl>
       read FAttributeControls;
@@ -152,13 +163,14 @@ begin
   RegisterComponents('Store', [TPluginManager]);
 end;
 
-procedure TPluginManager.RegisterAttributeControl(const AAcesso: Int64;
+procedure TPluginManager.RegisterAttributeControl(const ATypeID,ASubTypeID: Int64;
   ADoExecute: IPluginExecute);
 var
   it: TPluginAttributeControl;
 begin
   it := TPluginAttributeControl.Create;
-  it.Acesso := AAcesso;
+  it.TypeID := ATypeID;
+  it.SubTypeID := ASubTypeID;
   it.PluginExecute := ADoExecute;
   FAttributeControls.Add(it);
 end;
@@ -198,32 +210,6 @@ begin
 
 end;
 
-function LoadPluginService(APlugin: string;
-AAppliction: IPluginApplication): Integer;
-var
-  F: function(APApplication: IPluginApplication): IPluginItems;
-  H: THandle;
-  i: Integer;
-  itens: IPluginItems;
-begin
-  result := -1;
-  H := LoadLibrary(PWideChar(APlugin));
-  if H > 0 then
-  begin
-    try
-      @F := GetProcAddress(H, 'LoadPlugin');
-      if assigned(F) then
-      begin
-        itens := F(AAppliction);
-        result := LPluginManager.FPlugins.Add(H, APlugin, itens);
-      end
-      else
-        raise Exception.Create('Não carregou o plugin');
-    except
-      FreeLibrary(H);
-    end;
-  end;
-end;
 
 function GetPluginManager: TPluginManager;
 begin
@@ -272,6 +258,15 @@ begin
   inherited;
 end;
 
+function TPluginManagerIntf.Find(APlugin: string): TPluginInfo;
+var i : integer;
+begin
+    result := nil;
+    i := IndexOf(APlugin);
+    if i>=0 then
+       result := FList.Items[i];
+end;
+
 function TPluginManagerIntf.GetApplication: IPluginApplication;
 begin
   result := PluginApplication;
@@ -283,10 +278,30 @@ begin
 end;
 
 function TPluginManagerIntf.LoadPlugin(APlugin: string): Integer;
+var
+  F: function(APApplication: IPluginApplication): IPluginItems;
+  H: THandle;
+  i: Integer;
+  itens: IPluginItems;
 begin
-  result := LoadPluginService(APlugin, PluginApplication);
+  result := -1;
+  H := LoadLibrary(PWideChar(APlugin));
+  if H > 0 then
+  begin
+    try
+      @F := GetProcAddress(H, 'LoadPlugin');
+      if assigned(F) then
+      begin
+        itens := F(PluginApplication);
+        result := LPluginManager.FPlugins.Add(H, APlugin, itens);
+      end
+      else
+        raise Exception.Create('Não carregou o plugin');
+    except
+      FreeLibrary(H);
+    end;
+  end;
 end;
-
 function TPluginManagerIntf.LoadPlugins(AApplication
   : IPluginApplication): Integer;
 begin
@@ -339,15 +354,28 @@ begin
     end;
 end;
 
-function TPluginManagerIntf.RegisterPlugin(APlugin: string): Integer;
+function TPluginManagerIntf.IndexOf(APlugin: string): integer;
+var i:integer;
+begin
+  result := -1;
+  for I := 0 to FList.Count-1 do
+    if sametext(APlugin,FList.Items[i].Filename) then
+       begin
+         result := i;
+         exit;
+       end;
+end;
+
+function TPluginManagerIntf.InstallPlugin(APlugin: string): Integer;
 var
   i: Integer;
   app: string;
+  info:TPluginInfo;
 begin
   result := -1;
-  for i := 0 to FList.Count - 1 do
-    if sametext(APlugin, FList.Items[i].Filename) then
-      exit;
+  i := IndexOf(APlugin);
+  if i>=0 then
+     exit;
 
   result := LoadPlugin(APlugin);
   if result >= 0 then
@@ -361,6 +389,11 @@ begin
       finally
         Free;
       end;
+
+    info := find(APlugin);
+    if assigned(info) then
+       info.Plugin.Install;
+
   end;
 end;
 
@@ -378,6 +411,14 @@ end;
 procedure TPluginManagerIntf.SetPath(const Value: string);
 begin
   FPath := Value;
+end;
+
+procedure TPluginManagerIntf.UnInstallPlugin(APlugin: string);
+var info:TPluginInfo;
+begin
+   info := Find(APlugin);
+   if assigned(info) then
+      info.Plugin.UnInstall;
 end;
 
 { TPluginInfo }
@@ -424,6 +465,18 @@ begin
   inherited;
 end;
 
+procedure TPluginManager.EmbbedControl(AParentHandle:THandle; AControlID, AControlType: Int64);
+var i:integer;
+begin
+  for I := 0 to FAttributeControls.count -1 do
+  with FAttributeControls.Items[i] do
+    if (TypeID = AControlID) and (SubTypeID=AControlType) then
+    begin
+       FAttributeControls.Items[i].PluginExecute.Embedded(AParentHandle);
+    end;
+
+end;
+
 function TPluginManager.GetPluginPath: string;
 begin
   result := FPlugins.Path;
@@ -434,9 +487,9 @@ begin
   result := FPlugins.LoadPlugin(APlugin);
 end;
 
-function TPluginManager.RegisterPlugin(APlugin: string): Integer;
+function TPluginManager.InstallPlugin(APlugin: string): Integer;
 begin
-  result := FPlugins.RegisterPlugin(APlugin);
+  result := FPlugins.InstallPlugin(APlugin);
 end;
 
 procedure TPluginManager.SetActive(const Value: boolean);
@@ -454,6 +507,11 @@ end;
 procedure TPluginManager.SetPluginPath(const Value: string);
 begin
   FPlugins.Path := Value;
+end;
+
+procedure TPluginManager.UnInstallPlugin(APlugin: string);
+begin
+   FPlugins.UnInstallPlugin(APlugin);
 end;
 
 { TMenuItemInterf }

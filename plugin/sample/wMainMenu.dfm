@@ -22,9 +22,23 @@ object Form11: TForm11
     Height = 29
     Caption = 'ToolBar1'
     TabOrder = 0
-    ExplicitLeft = 280
-    ExplicitTop = 80
-    ExplicitWidth = 150
+  end
+  object Panel1: TPanel
+    Left = 24
+    Top = 96
+    Width = 465
+    Height = 249
+    Caption = 'PluginControl - here'
+    TabOrder = 1
+  end
+  object Button1: TButton
+    Left = 24
+    Top = 65
+    Width = 145
+    Height = 25
+    Caption = 'Load Plugin Control'
+    TabOrder = 2
+    OnClick = Button1Click
   end
   object MainMenu1: TMainMenu
     Left = 24

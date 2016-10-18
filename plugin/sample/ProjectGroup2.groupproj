@@ -9,6 +9,9 @@
         <Projects Include="PluginMenuItemSimple.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="PluginExecuteSimple.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -35,14 +38,23 @@
     <Target Name="PluginMenuItemSimple:Make">
         <MSBuild Projects="PluginMenuItemSimple.dproj" Targets="Make"/>
     </Target>
+    <Target Name="PluginExecuteSimple">
+        <MSBuild Projects="PluginExecuteSimple.dproj"/>
+    </Target>
+    <Target Name="PluginExecuteSimple:Clean">
+        <MSBuild Projects="PluginExecuteSimple.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="PluginExecuteSimple:Make">
+        <MSBuild Projects="PluginExecuteSimple.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="HostApplication;PluginMenuItemSimple"/>
+        <CallTarget Targets="HostApplication;PluginMenuItemSimple;PluginExecuteSimple"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="HostApplication:Clean;PluginMenuItemSimple:Clean"/>
+        <CallTarget Targets="HostApplication:Clean;PluginMenuItemSimple:Clean;PluginExecuteSimple:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="HostApplication:Make;PluginMenuItemSimple:Make"/>
+        <CallTarget Targets="HostApplication:Make;PluginMenuItemSimple:Make;PluginExecuteSimple:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

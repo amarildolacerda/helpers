@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics, plugin.Interf,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.ToolWin, Vcl.ComCtrls,
-  Vcl.Buttons, System.ImageList, Vcl.ImgList;
+  Vcl.Buttons, System.ImageList, Vcl.ImgList, Vcl.ExtCtrls, Vcl.StdCtrls;
 
 type
   TForm11 = class(TForm, IPluginApplication)
@@ -15,15 +15,18 @@ type
     InstallPlugins1: TMenuItem;
     ools1: TMenuItem;
     ToolBar1: TToolBar;
+    Panel1: TPanel;
+    Button1: TButton;
     procedure InstallPlugins1Click(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
     procedure RegisterMenuItem(const APath, ACaption: string;
       ADoExecute: IPluginMenuItem);
     procedure RegisterToolbarItem(const APath, ACaption: string;
       ADoExecute: IPluginToolbarItem);
-    procedure RegisterAttributeControl(const AAcesso: Int64;
+    procedure RegisterAttributeControl(const ATypeID,ASubTypeID: Int64;
       ADoExecute: IPluginControl);
 
   public
@@ -39,6 +42,11 @@ implementation
 {$R *.dfm}
 
 uses plugin.formManager, plugin.Manager;
+
+procedure TForm11.Button1Click(Sender: TObject);
+begin
+ GetPluginManager.EmbbedControl(Panel1.Handle,1,0);
+end;
 
 procedure TForm11.FormShow(Sender: TObject);
 begin
@@ -63,10 +71,10 @@ begin
     end;
 end;
 
-procedure TForm11.RegisterAttributeControl(const AAcesso: Int64;
+procedure TForm11.RegisterAttributeControl(const ATypeID,ASubTypeID: Int64;
       ADoExecute: IPluginControl);
 begin
-
+  GetPluginManager.RegisterAttributeControl(ATypeID,ASubTypeID,ADoExecute);
 end;
 
 procedure TForm11.RegisterMenuItem(const APath, ACaption: string;

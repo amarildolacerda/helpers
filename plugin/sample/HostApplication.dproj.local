@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <BorlandProject>
-  <Transactions>
-    <Transaction>2016/10/16 21:30:46.719,=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit11.pas</Transaction>
-    <Transaction>2016/10/16 21:31:11.124,C:\Fontes\plugin\sample\wMainMenu.pas=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit11.pas</Transaction>
-    <Transaction>2016/10/16 21:31:11.124,C:\Fontes\plugin\sample\wMainMenu.dfm=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit11.dfm</Transaction>
-    <Transaction>2016/10/16 21:31:24.906,C:\Fontes\plugin\sample\HostApplication.dproj=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Project5.dproj</Transaction>
-    <Transaction>2016/10/16 23:43:50.095,=C:\Fontes\plugin\sample\Unit1.pas</Transaction>
-    <Transaction>2016/10/16 23:44:16.172,C:\Fontes\plugin\plugin.toolbar.pas=C:\Fontes\plugin\sample\Unit1.pas</Transaction>
-    <Transaction>2016/10/16 23:50:30.048,C:\Fontes\plugin\plugin.ToolBar1.pas=C:\Fontes\plugin\plugin.toolbar.pas</Transaction>
-    <Transaction>2016/10/16 23:50:38.686,C:\Fontes\plugin\plugin.ToolBar.pas=C:\Fontes\plugin\plugin.ToolBar1.pas</Transaction>
+	<Transactions>
+    <Transaction>2016/10/16 21:30:46.000.719,=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit11.pas</Transaction>
+    <Transaction>2016/10/16 21:31:11.000.124,C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit11.dfm=C:\Fontes\plugin\sample\wMainMenu.dfm</Transaction>
+    <Transaction>2016/10/16 21:31:11.000.124,C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit11.pas=C:\Fontes\plugin\sample\wMainMenu.pas</Transaction>
+    <Transaction>2016/10/16 21:31:24.000.906,C:\Users\amari\Documents\Embarcadero\Studio\Projects\Project5.dproj=C:\Fontes\plugin\sample\HostApplication.dproj</Transaction>
+    <Transaction>2016/10/16 23:43:50.000.095,=C:\Fontes\plugin\sample\Unit1.pas</Transaction>
+    <Transaction>2016/10/16 23:44:16.000.172,C:\Fontes\plugin\sample\Unit1.pas=C:\Fontes\plugin\plugin.toolbar.pas</Transaction>
+    <Transaction>2016/10/16 23:50:30.000.048,C:\Fontes\plugin\plugin.toolbar.pas=C:\Fontes\plugin\plugin.ToolBar1.pas</Transaction>
+    <Transaction>2016/10/16 23:50:38.000.686,C:\Fontes\plugin\plugin.ToolBar1.pas=C:\Fontes\plugin\plugin.ToolBar.pas</Transaction>
   </Transactions>
 </BorlandProject>

@@ -58,7 +58,7 @@ type
     ['{1BBC2D91-BF8A-4976-9EF5-201A518D62A3}']
     procedure DoStart;
     function PluginName: string;
-    function PluginAccess: Int64;
+    function GetTypeID: Int64;
     function GetAuthor: string;
     function GetInterface: IPluginExecuteBase; // retorna a interface que implementa.
   end;
@@ -70,6 +70,8 @@ type
     ['{756E63BE-4C02-46AF-85AD-87BDB657201F}']
     function Count: integer;
     function GetItem(idx: integer): IPluginInfo;
+    procedure Install;
+    procedure UnInstall;
   end;
 
 
@@ -82,7 +84,7 @@ type
   //  function GetHandle:THandle;
   //  procedure SetHandle(AHandle:THandle);
     function GetCaption: string;
-    function PluginIdent: Int64;
+    function GetTypeID: Int64;
     procedure Connect(AAlias: string; AUser: string; APass: string);
     procedure User(AFilial: integer; AAppUser: string);
     procedure Sync(AJson: string);
@@ -98,7 +100,7 @@ type
 
   IPluginControl = interface(IPluginExecute)
     ['{84B1D051-D13D-4D72-BE63-26757FED98AB}']
-    function GetAccess: Int64;
+    function GetSubTypeID: Int64;
   end;
 
   IPluginMenuItem = interface(IPluginExecuteBase)
@@ -122,9 +124,8 @@ type
       ADoExecute: IPluginMenuItem);
     procedure RegisterToolbarItem(const APath, ACaption: string;
       ADoExecute: IPluginToolbarItem);
-    procedure RegisterAttributeControl(const AAcesso: Int64;
+    procedure RegisterAttributeControl(const AType,ASubType: Int64;
       ADoExecute: IPluginControl);
-
   end;
 
 var
