@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{5B32DD23-9B6B-41DA-99AA-2B993D06A74C}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="HostApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="PluginMenuItemSimple.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="HostApplication">
+        <MSBuild Projects="HostApplication.dproj"/>
+    </Target>
+    <Target Name="HostApplication:Clean">
+        <MSBuild Projects="HostApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HostApplication:Make">
+        <MSBuild Projects="HostApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="PluginMenuItemSimple">
+        <MSBuild Projects="PluginMenuItemSimple.dproj"/>
+    </Target>
+    <Target Name="PluginMenuItemSimple:Clean">
+        <MSBuild Projects="PluginMenuItemSimple.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="PluginMenuItemSimple:Make">
+        <MSBuild Projects="PluginMenuItemSimple.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="HostApplication;PluginMenuItemSimple"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="HostApplication:Clean;PluginMenuItemSimple:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="HostApplication:Make;PluginMenuItemSimple:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
