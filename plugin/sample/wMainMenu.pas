@@ -45,6 +45,8 @@ uses plugin.FormManager, plugin.Manager;
 
 procedure TForm11.Button1Click(Sender: TObject);
 begin
+ // procura um plugin que se encaixa nos parametros indicados.
+ // se estiver usando Um TPageControl, pode por cada plugin em uma aba.
  GetPluginManager.NewEmbbedControl(Panel1.Handle,1,0);
 end;
 
@@ -95,6 +97,7 @@ begin
 end;
 
 type
+   // hack TToolButton
    TToolButtonEx = class(TSpeedButton)
      public
        Data:IPluginToolBarItem;

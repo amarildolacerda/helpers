@@ -173,8 +173,8 @@ begin
 
   WinApi.Windows.SetParent(FForm.Handle, AParent);
   FForm.BorderStyle := bsNone;
-  FForm.Align := alClient;
   FForm.Show;
+  FForm.Align := alClient;
 
 end;
 

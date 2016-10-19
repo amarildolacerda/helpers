@@ -33,9 +33,12 @@ type
 
   TPluginExecuteService = class(TPluginService, IPluginExecute)
   protected
-    FHandle:THandle;
-    FIndex:integer;
-    FSubTypeID:Int64;
+    FSubTypeID: Int64;
+    FParams: String;
+    FConnectionName: string;
+    FUser, FPass: string;
+    FFilial: integer;
+    FAppUser: string;
   private
     procedure SetSubTypeID(const Value: Int64);
   protected
@@ -43,29 +46,31 @@ type
     procedure SetForm(const Value: TForm); virtual;
     function GetForm(AParent: THandle): TForm; virtual;
     function GetCaption: string; virtual;
-    function GetSubTypeID: int64;virtual;
+    function GetSubTypeID: Int64; virtual;
 
-    {function GetHandle:THandle;
-    procedure SetHandle(AHandle:THandle);
+    { function GetHandle:THandle;
+      procedure SetHandle(AHandle:THandle);
     }
-    procedure Connect(const AAlias: string;const  AUser: string; const APass: string); virtual;
+    procedure Connect(const AAlias: string; const AUser: string;
+      const APass: string); virtual;
     procedure User(const AFilial: integer; const AAppUser: string); virtual;
     procedure Sync(const AJson: string); virtual;
     procedure Execute(const AModal: boolean); virtual;
+    procedure SetParams(AJsonParams: String);
 
     function GetAuthor: string; virtual;
     function GetName: string; virtual;
     function GetVersion: string; virtual;
     function GetDescription: string; virtual;
   public
-    property SubTypeID:Int64 read GetSubTypeID write SetSubTypeID;
+    property SubTypeID: Int64 read GetSubTypeID write SetSubTypeID;
   end;
 
   TPluginFormService = class(TPluginExecuteService)
   protected
     FCaption: string;
     FFormClass: TFormClass;
-    procedure Init;
+    procedure Init; virtual;
   public
     constructor Create(AFormClass: TFormClass; ACaption: String); virtual;
     procedure Execute(const AModal: boolean); override;
@@ -73,22 +78,25 @@ type
     procedure DoStart; override;
   end;
 
-
 implementation
 
 uses System.classes.Helper, System.Rtti;
 
 procedure TPluginExecuteService.Connect(const AAlias, AUser, APass: string);
 begin
+  FConnectionName := AAlias;
+  FUser := AUser;
+  FPass := APass;
   if not assigned(FForm) then
     exit;
   if Supports(FForm, IPluginExecuteBase) then
     (FForm as IPluginExecuteBase).Connect(AAlias, AUser, APass)
   else
   begin
-    FForm.Properties['Aliasname'] := AAlias;
-    FForm.Properties['UserName'] := AUser;
-    FForm.Properties['Password'] := APass;
+    // DO NOT CHANGE NAMES
+    FForm.Properties['ConnectionName'] := AAlias;
+    FForm.Properties['DbUserName'] := AUser;
+    FForm.Properties['DbPassword'] := APass;
   end;
 end;
 
@@ -131,14 +139,16 @@ function TPluginExecuteService.GetForm(AParent: THandle): TForm;
 begin
   result := FForm;
   if AParent > 0 then
+  begin
     WinApi.windows.SetParent(FForm.Handle, AParent);
+  end;
 end;
 
 {
-function TPluginExecuteService.GetHandle: THandle;
-begin
-   result := FHandle;
-end;
+  function TPluginExecuteService.GetHandle: THandle;
+  begin
+  result := FHandle;
+  end;
 }
 function TPluginExecuteService.GetName: string;
 begin
@@ -150,7 +160,7 @@ begin
   result := '01.00';
 end;
 
-function TPluginExecuteService.GetSubTypeID: int64;
+function TPluginExecuteService.GetSubTypeID: Int64;
 begin
   result := FSubTypeID;
 end;
@@ -161,6 +171,14 @@ begin
   if assigned(FForm) then
     FreeAndNil(FForm);
   FForm := Value;
+  Connect(FConnectionName, FUser, FPass);
+  User(FFilial, FAppUser);
+
+end;
+
+procedure TPluginExecuteService.SetParams(AJsonParams: String);
+begin
+  FParams := AJsonParams;
 end;
 
 procedure TPluginExecuteService.SetSubTypeID(const Value: Int64);
@@ -168,10 +186,10 @@ begin
   FSubTypeID := Value;
 end;
 
-{procedure TPluginExecuteService.SetHandle(AHandle: THandle);
-begin
-   FHandle := AHandle;
-end;
+{ procedure TPluginExecuteService.SetHandle(AHandle: THandle);
+  begin
+  FHandle := AHandle;
+  end;
 }
 procedure TPluginExecuteService.Sync(const AJson: string);
 begin
@@ -185,8 +203,11 @@ begin
   end;
 end;
 
-procedure TPluginExecuteService.User(const AFilial: integer; const AAppUser: string);
+procedure TPluginExecuteService.User(const AFilial: integer;
+  const AAppUser: string);
 begin
+  FFilial := AFilial;
+  FAppUser := AAppUser;
   if not assigned(FForm) then
     exit;
   if Supports(FForm, IPluginExecuteBase) then

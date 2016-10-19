@@ -88,6 +88,7 @@ type
     function GetTypeID: Int64;
     procedure SetTypeID(const ATypeID:Int64);
     procedure Connect(const AConnectionName: string; const AUser: string; const APass: string);
+    procedure SetParams( AJsonParams:String );
     procedure User(const AFilial: integer; const AAppUser: string);
     procedure Sync(const AJson: string);
     // {"control":xxx,...."operation":"open"}  // TPluginOperation = (open,close,edit,insert,post,delete)

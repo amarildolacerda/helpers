@@ -19,16 +19,16 @@ type
   TPluginMenuItemService = class(TPluginMenuItemBase)
   private
     FFormClass: TFormClass;
-    procedure init;
-    procedure Embedded(const AParent: THandle); override;
   protected
     FMenuItemName: string;
     FCaption: String;
+    procedure init;Virtual;
+    procedure Embedded(const AParent: THandle); override;
   public
-    constructor Create(AFormClass: TFormClass;AMenuItemName:string; ATypeID: Int64;
-      ACaption: String); virtual;
-    class function New(AFormClass: TFormClass;AMenuItemName:string; ATypeID: Int64; ACaption: String)
-      : IPluginMenuItem;
+    constructor Create(AFormClass: TFormClass; AMenuItemName: string;
+      ATypeID: Int64; ACaption: String); virtual;
+    class function New(AFormClass: TFormClass; AMenuItemName: string;
+      ATypeID: Int64; ACaption: String): IPluginMenuItem;
     procedure DoStart; override;
     function GetInterface: IPluginExecuteBase; override;
     function GetCaption: string; override;
@@ -66,8 +66,8 @@ end;
 
 { TPluginMenuItemService<T> }
 
-constructor TPluginMenuItemService.Create(AFormClass: TFormClass;AMenuItemName:string; ATypeID: Int64;
-      ACaption: String);
+constructor TPluginMenuItemService.Create(AFormClass: TFormClass;
+  AMenuItemName: string; ATypeID: Int64; ACaption: String);
 begin
   inherited Create;
   FMenuItemName := AMenuItemName;
@@ -113,11 +113,13 @@ begin
 
 end;
 
-class function TPluginMenuItemService.New(AFormClass: TFormClass;AMenuItemName:string; ATypeID: Int64; ACaption: String)
-      : IPluginMenuItem;
-var dlg:TPluginMenuItemService;
+class function TPluginMenuItemService.New(AFormClass: TFormClass;
+  AMenuItemName: string; ATypeID: Int64; ACaption: String): IPluginMenuItem;
+var
+  dlg: TPluginMenuItemService;
 begin
-  dlg := TPluginMenuItemService.Create(AFormClass,AMenuItemName, ATypeID, ACaption);
+  dlg := TPluginMenuItemService.Create(AFormClass, AMenuItemName, ATypeID,
+    ACaption);
   result := dlg;
 end;
 
