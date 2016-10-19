@@ -35,7 +35,8 @@ unit Plugin.Service;
 
 interface
 
-uses WinApi.Windows, VCL.Forms, VCL.Controls, Plugin.Interf, System.Generics.collections;
+uses WinApi.Windows, VCL.Forms, VCL.Controls, Plugin.Interf,
+  System.Generics.collections;
 
 Type
   // List of plugins
@@ -47,32 +48,33 @@ Type
   public
     constructor Create;
     destructor Destroy; override;
+    procedure Connect(const AAlias: string; const AUser: string; const APass: string);virtual;
     function Count: integer;
     function GetItem(idx: integer): IPluginInfo;
     procedure Add(APlugin: IPluginInfo);
     procedure Install; virtual;
     procedure UnInstall; virtual;
-
   end;
 
   // plugin base
   TPluginService = class(TInterfacedObject, IPluginInfo)
   private
-    FTypeID:Int64;
+    FTypeID: Int64;
   protected
     FForm: TForm;
     FOwned: boolean;
-    procedure SetTypeID(const Value: Int64);virtual;
     function GetTypeID: Int64; virtual;
+    procedure SetTypeID(const Value: Int64); virtual;
   public
     constructor Create; overload;
+    destructor Destroy; override;
     function GetAuthor: string; virtual;
     procedure DoStart; virtual;
     function GetInterface: IPluginExecuteBase; virtual;
     function PluginName: string; virtual;
     procedure Embedded(const AParent: THandle); virtual;
     function CanClose: boolean; virtual;
-    property TypeID:Int64 read GetTypeID write SetTypeID;
+    property TypeID: Int64 read GetTypeID write SetTypeID;
   end;
 
   // register one plugin to list of plugins
@@ -116,6 +118,12 @@ function TPluginService.GetInterface: IPluginExecuteBase;
 begin
   if Supports(FForm, IPluginExecuteBase) then
     result := FForm as IPluginExecuteBase;
+end;
+
+destructor TPluginService.Destroy;
+begin
+  FreeAndNil(FForm);
+  inherited;
 end;
 
 procedure TPluginService.DoStart;
@@ -163,7 +171,7 @@ begin
   if not assigned(FForm) then
     exit;
 
-  winapi.windows.SetParent(FForm.Handle,AParent);
+  WinApi.Windows.SetParent(FForm.Handle, AParent);
   FForm.BorderStyle := bsNone;
   FForm.Align := alClient;
   FForm.Show;
@@ -182,7 +190,7 @@ end;
 
 procedure UnloadPlugin;
 begin
-  LPlugin := nil;
+  //LPlugin := nil;
   // PluginApplication := nil;
 end;
 
@@ -198,6 +206,11 @@ end;
 procedure TPluginItemsInterfaced.Add(APlugin: IPluginInfo);
 begin
   FItems.Add(APlugin);
+end;
+
+procedure TPluginItemsInterfaced.Connect(const AAlias, AUser, APass: string);
+begin
+
 end;
 
 function TPluginItemsInterfaced.Count: integer;
@@ -219,8 +232,8 @@ begin
   begin
     try
       i := FItems.Items[0];
-      FItems.delete(0);
       i := nil;
+      FItems.delete(0);
     except
     end;
   end;
@@ -246,6 +259,10 @@ end;
 exports LoadPlugin, UnloadPlugin;
 
 initialization
-   RegisterPluginClass(TPluginItemsInterfaced);
+
+RegisterPluginClass(TPluginItemsInterfaced);
+
+finalization
+  LPlugin := nil;
 
 end.

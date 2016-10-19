@@ -26,4 +26,14 @@ object Form1: TForm1
     TabOrder = 0
     OnClick = Button1Click
   end
+  object LabeledEdit1: TLabeledEdit
+    Left = 8
+    Top = 55
+    Width = 121
+    Height = 21
+    EditLabel.Width = 61
+    EditLabel.Height = 13
+    EditLabel.Caption = 'LabeledEdit1'
+    TabOrder = 1
+  end
 end

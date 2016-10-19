@@ -8,24 +8,27 @@ uses System.classes, WinApi.Windows, System.SysUtils, VCL.Forms, VCL.Controls,
 
 type
 
-
   TPluginMenuItemBase = class(TPluginExecuteService, IPluginMenuItem)
   public
-    function GetResourceName:String; virtual;
+    function GetResourceName: String; virtual;
     function GetCaption: string; virtual;
     function GetPath: string; virtual;
     procedure DoClick(const AParent: THandle); virtual;
   end;
 
-
   TPluginMenuItemService = class(TPluginMenuItemBase)
   private
-    FCaption: String;
     FFormClass: TFormClass;
     procedure init;
     procedure Embedded(const AParent: THandle); override;
+  protected
+    FMenuItemName: string;
+    FCaption: String;
   public
-    constructor Create(AFormClass: TFormClass; ACaption: String); virtual;
+    constructor Create(AFormClass: TFormClass;AMenuItemName:string; ATypeID: Int64;
+      ACaption: String); virtual;
+    class function New(AFormClass: TFormClass;AMenuItemName:string; ATypeID: Int64; ACaption: String)
+      : IPluginMenuItem;
     procedure DoStart; override;
     function GetInterface: IPluginExecuteBase; override;
     function GetCaption: string; override;
@@ -33,7 +36,6 @@ type
   end;
 
 implementation
-
 
 { TPluginFormMenuService }
 
@@ -47,7 +49,7 @@ begin
   LForm.ShowModal;
 end;
 
-function TPluginMenuItemBase.GetResourceName:String;
+function TPluginMenuItemBase.GetResourceName: String;
 begin
   result := '';
 end;
@@ -62,15 +64,16 @@ begin
   result := '';
 end;
 
-
 { TPluginMenuItemService<T> }
 
-constructor TPluginMenuItemService.Create(AFormClass: TFormClass;
-  ACaption: String);
+constructor TPluginMenuItemService.Create(AFormClass: TFormClass;AMenuItemName:string; ATypeID: Int64;
+      ACaption: String);
 begin
   inherited Create;
+  FMenuItemName := AMenuItemName;
   FCaption := ACaption;
   FFormClass := AFormClass;
+  TypeID := ATypeID;
 end;
 
 procedure TPluginMenuItemService.DoClick(const AParent: THandle);
@@ -82,7 +85,7 @@ end;
 procedure TPluginMenuItemService.DoStart;
 begin
   inherited;
-  PluginApplication.RegisterMenuItem(  '', GetCaption, self);
+  PluginApplication.RegisterMenuItem(FMenuItemName, GetCaption, self);
 end;
 
 procedure TPluginMenuItemService.Embedded(const AParent: THandle);
@@ -98,7 +101,7 @@ end;
 
 function TPluginMenuItemService.GetInterface: IPluginExecuteBase;
 begin
-  result := self as IPluginMenuitem;
+  result := self as IPluginMenuItem;
 end;
 
 procedure TPluginMenuItemService.init;
@@ -108,6 +111,14 @@ begin
   FForm.Caption := FCaption;
   FOwned := true;
 
+end;
+
+class function TPluginMenuItemService.New(AFormClass: TFormClass;AMenuItemName:string; ATypeID: Int64; ACaption: String)
+      : IPluginMenuItem;
+var dlg:TPluginMenuItemService;
+begin
+  dlg := TPluginMenuItemService.Create(AFormClass,AMenuItemName, ATypeID, ACaption);
+  result := dlg;
 end;
 
 end.

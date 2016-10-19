@@ -48,10 +48,10 @@ type
     {function GetHandle:THandle;
     procedure SetHandle(AHandle:THandle);
     }
-    procedure Connect(AAlias: string; AUser: string; APass: string); virtual;
-    procedure User(AFilial: integer; AAppUser: string); virtual;
-    procedure Sync(AJson: string); virtual;
-    procedure Execute(AModal: boolean); virtual;
+    procedure Connect(const AAlias: string;const  AUser: string; const APass: string); virtual;
+    procedure User(const AFilial: integer; const AAppUser: string); virtual;
+    procedure Sync(const AJson: string); virtual;
+    procedure Execute(const AModal: boolean); virtual;
 
     function GetAuthor: string; virtual;
     function GetName: string; virtual;
@@ -68,7 +68,7 @@ type
     procedure Init;
   public
     constructor Create(AFormClass: TFormClass; ACaption: String); virtual;
-    procedure Execute(AModal: boolean); override;
+    procedure Execute(const AModal: boolean); override;
     procedure Embedded(const AParent: THandle); override;
     procedure DoStart; override;
   end;
@@ -78,7 +78,7 @@ implementation
 
 uses System.classes.Helper, System.Rtti;
 
-procedure TPluginExecuteService.Connect(AAlias, AUser, APass: string);
+procedure TPluginExecuteService.Connect(const AAlias, AUser, APass: string);
 begin
   if not assigned(FForm) then
     exit;
@@ -99,7 +99,7 @@ begin
   inherited;
 end;
 
-procedure TPluginExecuteService.Execute(AModal: boolean);
+procedure TPluginExecuteService.Execute(const AModal: boolean);
 begin
   if not assigned(FForm) then
     exit;
@@ -173,7 +173,7 @@ begin
    FHandle := AHandle;
 end;
 }
-procedure TPluginExecuteService.Sync(AJson: string);
+procedure TPluginExecuteService.Sync(const AJson: string);
 begin
   if not assigned(FForm) then
     exit;
@@ -185,7 +185,7 @@ begin
   end;
 end;
 
-procedure TPluginExecuteService.User(AFilial: integer; AAppUser: string);
+procedure TPluginExecuteService.User(const AFilial: integer; const AAppUser: string);
 begin
   if not assigned(FForm) then
     exit;
@@ -218,7 +218,7 @@ begin
   inherited;
 end;
 
-procedure TPluginFormService.Execute(AModal: boolean);
+procedure TPluginFormService.Execute(const AModal: boolean);
 begin
   Init;
   inherited;

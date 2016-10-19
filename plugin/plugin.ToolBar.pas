@@ -17,7 +17,7 @@ implementation
 
 procedure TPluginToolbarService.DoStart;
 begin
-  PluginApplication.RegisterToolbarItem('',GetCaption,self);
+  PluginApplication.RegisterToolbarItem(FMenuItemName ,GetCaption,self);
 end;
 
 function TPluginToolbarService.GetInterface: IPluginExecuteBase;

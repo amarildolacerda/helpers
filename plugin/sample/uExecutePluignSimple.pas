@@ -41,10 +41,10 @@ end;
 initialization
 
 // plugin 1
-RegisterPlugin(TPluginMenuItemService.Create(TForm2, 'Menu base de sample2'));
+RegisterPlugin(TPluginMenuItemService.Create(TForm2,'',0, 'Menu base de sample2'));
 
 // plugin 2  (can be another form)
-RegisterPlugin(TPluginToolbarServiceEx.Create(TForm2, 'X'));
+RegisterPlugin(TPluginToolbarServiceEx.Create(TForm2,'',0, 'XxxxX'));
 
 finalization
 

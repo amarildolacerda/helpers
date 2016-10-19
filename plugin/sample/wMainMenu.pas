@@ -41,18 +41,18 @@ implementation
 
 {$R *.dfm}
 
-uses plugin.formManager, plugin.Manager;
+uses plugin.FormManager, plugin.Manager;
 
 procedure TForm11.Button1Click(Sender: TObject);
 begin
- GetPluginManager.EmbbedControl(Panel1.Handle,1,0);
+ GetPluginManager.NewEmbbedControl(Panel1.Handle,1,0);
 end;
 
 procedure TForm11.FormShow(Sender: TObject);
 begin
   // load plugins
   GetPluginManager.Plugins.SetFileName(GetPluginIni);
-  GetPluginManager.Plugins.LoadPlugins(self);
+  GetPluginManager.Plugins.Open(self);
 end;
 
 function TForm11.GetPluginIni: string;
@@ -74,13 +74,13 @@ end;
 procedure TForm11.RegisterAttributeControl(const ATypeID,ASubTypeID: Int64;
       ADoExecute: IPluginControl);
 begin
-  GetPluginManager.RegisterAttributeControl(ATypeID,ASubTypeID,ADoExecute);
+  GetPluginManager.NewAttributeControl(ATypeID,ASubTypeID,ADoExecute);
 end;
 
 procedure TForm11.RegisterMenuItem(const APath, ACaption: string;
   ADoExecute: IPluginMenuItem);
 begin
-  GetPluginManager.RegisterMenuItem(MainMenu1, Plugins1, APath, ACaption,
+  GetPluginManager.newMenuItem(MainMenu1, Plugins1, APath, ACaption,
     ADoExecute, nil);
    { another option:....
      GetPluginManager.RegisterMenuItem(MainMenu1, Plugins1, APath, ACaption,

@@ -70,6 +70,7 @@ type
     ['{756E63BE-4C02-46AF-85AD-87BDB657201F}']
     function Count: integer;
     function GetItem(idx: integer): IPluginInfo;
+    procedure Connect(const AConnectionName: string; const AUser: string; const APass: string);
     procedure Install;
     procedure UnInstall;
   end;
@@ -85,16 +86,17 @@ type
   //  procedure SetHandle(AHandle:THandle);
     function GetCaption: string;
     function GetTypeID: Int64;
-    procedure Connect(AAlias: string; AUser: string; APass: string);
-    procedure User(AFilial: integer; AAppUser: string);
-    procedure Sync(AJson: string);
+    procedure SetTypeID(const ATypeID:Int64);
+    procedure Connect(const AConnectionName: string; const AUser: string; const APass: string);
+    procedure User(const AFilial: integer; const AAppUser: string);
+    procedure Sync(const AJson: string);
     // {"control":xxx,...."operation":"open"}  // TPluginOperation = (open,close,edit,insert,post,delete)
     function CanClose: Boolean;
   end;
 
   IPluginExecute = interface(IPluginExecuteBase)
     ['{73D9055C-56B3-4ADC-98E6-4F5F0B2D930F}']
-    procedure Execute(AModal: Boolean);
+    procedure Execute(const AModal: Boolean);
     procedure Embedded(const AParent: THandle);
   end;
 
@@ -120,9 +122,9 @@ type
   // ----------------------------------------------------------------------------
   IPluginApplication = interface
     ['{6ED989EA-E8B5-4435-A0BC-33685CFE7EEB}']
-    procedure RegisterMenuItem(const APath, ACaption: string;
+    procedure RegisterMenuItem(const AParentMenuItemName, ACaption: string;
       ADoExecute: IPluginMenuItem);
-    procedure RegisterToolbarItem(const APath, ACaption: string;
+    procedure RegisterToolbarItem(const AParentItemName, ACaption: string;
       ADoExecute: IPluginToolbarItem);
     procedure RegisterAttributeControl(const AType,ASubType: Int64;
       ADoExecute: IPluginControl);

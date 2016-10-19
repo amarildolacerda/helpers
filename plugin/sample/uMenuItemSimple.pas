@@ -5,11 +5,13 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics,
-  plugin.Interf, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls;
+  plugin.Interf, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
+  Vcl.ExtCtrls;
 
 type
   TForm1 = class(TForm)
     Button1: TButton;
+    LabeledEdit1: TLabeledEdit;
     procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
@@ -35,7 +37,7 @@ end;
 
 initialization
 
-RegisterPlugin(TPluginMenuItemService.Create(TForm1, 'Menu base de sample'));
+RegisterPlugin(TPluginMenuItemService.Create(TForm1,'',1, 'Menu base de sample'));
 RegisterPlugin(TPluginControlService.create(TForm1,1,0,'my control embbedded'));
 
 

@@ -1,1 +1,3 @@
-{$define USE_INIFILEEx}
+{$ifdef PLUGINS}
+  {$define USE_INIFILEEx}
+{$endif}

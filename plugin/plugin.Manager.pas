@@ -33,6 +33,8 @@
 
 unit Plugin.Manager;
 
+{$I plugin.inc}
+
 interface
 
 uses
@@ -59,18 +61,24 @@ type
     function Add(AHandle: THandle; AFilename: string;
       APlugins: IPluginItems): Integer;
     function LoadPlugin(APlugin: string): Integer;
-    function LoadPlugins(APath: string; AApplication: IPluginApplication)
+    function LoadPlugins(APlugin: string; AApplication: IPluginApplication)
       : Integer; overload;
-    function LoadPlugins(AApplication: IPluginApplication): Integer; overload;
+    function Open(AApplication: IPluginApplication): Integer; overload;
     function InstallPlugin(APlugin: string): Integer;
-    procedure UnInstallPlugin(APlugin:string);
+    procedure UnInstallPlugin(APlugin: string);
+    procedure Connect(const AConnectionName: string; const AUser: string;
+      const APass: string);
+    procedure User(const AFilial: Integer; const AAppUser: string);
   end;
 
   TPluginManagerIntf = class(TInterfacedObject, IPluginManager)
   private
-    FPath: string;
     FFilename: string;
-    procedure SetPath(const Value: string);
+    FConnectionName: string;
+    FUser: String;
+    FPass: String;
+    FAppUser: string;
+    FFilial: Integer;
   protected
     FList: TList<TPluginInfo>;
   public
@@ -79,65 +87,115 @@ type
     function GetApplication: IPluginApplication;
     procedure SetApplication(Const AApplication: IPluginApplication);
     procedure SetFileName(AFilename: string);
-    property Path: string read FPath write SetPath;
     function Count: Integer;
     function GetItem(idx: Integer): IPluginItems;
-    function Find(APlugin:string):TPluginInfo;
-    function IndexOf(APlugin:string):integer;
+    function Find(APlugin: string): TPluginInfo;
+    function IndexOf(APlugin: string): Integer;
     function Add(AHandle: THandle; AFilename: String;
       APlugins: IPluginItems): Integer;
     function LoadPlugin(APlugin: string): Integer;
-    function LoadPlugins(APath: string; AApplication: IPluginApplication)
+    function LoadPlugins(AFilename: string; AApplication: IPluginApplication)
       : Integer; overload;
-    function LoadPlugins(AApplication: IPluginApplication): Integer; overload;
 
+    procedure Connect(const AConnectionName: string; const AUser: string;
+      const APass: string);
+    procedure User(const AFilial: Integer; const AAppUser: string);
+    function Open(AApplication: IPluginApplication): Integer; overload;
+
+    property Filename: string read FFilename write SetFileName;
     function InstallPlugin(APlugin: string): Integer;
-    procedure UnInstallPlugin(APlugin:string);
-
+    procedure UnInstallPlugin(APlugin: string);
   end;
 
   TPluginAttributeControl = class
   public
     TypeID: Int64;
-    SubTypeID:Int64;
+    SubTypeID: Int64;
     PluginExecute: IPluginExecute;
   end;
 
-  TPluginManager = class(TComponent)
+  TPluginApplicationMenuItemEvent = procedure(const AParentMenuItemName,
+    ACaption: string; ADoExecute: IPluginMenuItem) of object;
+  TPluginApplicationToolbarItemEvent = procedure(const AParentItemName,
+    ACaption: string; ADoExecute: IPluginToolbarItem) of object;
+  TPluginApplicationControlEvent = procedure(const AType, ASubType: Int64;
+    ADoExecute: IPluginControl) of object;
+
+  TPluginManager = class(TComponent, IPluginApplication)
   private
-    FActive: boolean;
-    FOnActive: TNotifyEvent;
-    procedure SetPluginPath(const Value: string);
-    procedure SetActive(const Value: boolean);
-    procedure SetOnActive(const Value: TNotifyEvent);
-    function GetPluginPath: string;
-  protected
+    FonRegisterMenuItem: TPluginApplicationMenuItemEvent;
+    FonRegisterToolbarItem: TPluginApplicationToolbarItemEvent;
+    FonRegisterControl: TPluginApplicationControlEvent;
     FPlugins: TPluginManagerIntf;
     FAttributeControls: TObjectList<TPluginAttributeControl>;
+    FActive: boolean;
+    FOnActive: TNotifyEvent;
+    procedure SetActive(const Value: boolean);
+    procedure SetOnActive(const Value: TNotifyEvent);
+    function GetFileName: string;
+    procedure SetFileName(const Value: string);
+    procedure SetonRegisterMenuItem(const Value
+      : TPluginApplicationMenuItemEvent);
+    procedure SetonRegisterToolbarItem(const Value
+      : TPluginApplicationToolbarItemEvent);
+    procedure SetonRegisterControl(const Value: TPluginApplicationControlEvent);
+  protected
+    // IPluginApplication
+    procedure &RegisterMenuItem(const AParentMenuItemName, ACaption: string;
+      ADoExecute: IPluginMenuItem);
+    procedure &RegisterToolbarItem(const AParentItemName, ACaption: string;
+      ADoExecute: IPluginToolbarItem);
+    procedure &RegisterAttributeControl(const AType, ASubType: Int64;
+      ADoExecute: IPluginControl);
   public
     constructor Create(ow: TComponent); override;
     destructor Destroy; override;
-    procedure RegisterMenuItem(AMainMenu: TMainMenu; ADefaultMenu: TMenuItem;
+
+    // default create item
+    procedure NewMenuItem(AMainMenu: TMainMenu; ADefaultMenu: TMenuItem;
       const APath, ACaption: string; ADoExecute: IPluginMenuItem;
-      AProc: TProc<TObject>);
-    procedure RegisterAttributeControl(const ATypeID,ASubTypeID: Int64;
-  ADoExecute: IPluginExecute);
+      AProc: TProc<TObject>);overload;
+    procedure NewAttributeControl(const ATypeID, ASubTypeID: Int64;
+      ADoExecute: IPluginExecute);overload;
+    procedure NewEmbbedControl(AParentHandle: THandle; AControlID: Int64;
+      AControlType: Int64 = 0); overload; virtual;
+    procedure EmbbedControl(AControlID: Int64; AControlType: Int64;
+      AProc: TProc<IPluginExecute>); overload; virtual;
 
-    procedure EmbbedControl(AParentHandle:THandle; AControlID:Int64;AControlType:Int64=0);virtual;
-
+    // jobs
     function LoadPlugins(APlugin: string): Integer; virtual;
     function InstallPlugin(APlugin: string): Integer; virtual;
-    procedure UnInstallPlugin(APlugin:string);virtual;
+    procedure UnInstallPlugin(APlugin: string); virtual;
+
+    // list os plugins
     property Plugins: TPluginManagerIntf read FPlugins;
+    // list of plugins controls
     property AttributeControls: TObjectList<TPluginAttributeControl>
       read FAttributeControls;
+
+    // operations
+    procedure Open(AApp: IPluginApplication);
+    procedure Connect(const AConnectionName: string; const AUser: string;
+      const APass: string);
+    procedure User(const AFilial: Integer; const AAppUser: string);
+
   published
+    // events fire when plugin start
+    property onRegisterMenuItem: TPluginApplicationMenuItemEvent
+      read FonRegisterMenuItem write SetonRegisterMenuItem;
+    property onRegisterToolbarItem: TPluginApplicationToolbarItemEvent
+      read FonRegisterToolbarItem write SetonRegisterToolbarItem;
+    property onRegisterControl: TPluginApplicationControlEvent
+      read FonRegisterControl write SetonRegisterControl;
+
+    // aditional
+    property Filename: string read GetFileName write SetFileName;
     property Active: boolean read FActive write SetActive;
-    property PluginPath: string read GetPluginPath write SetPluginPath;
     property OnActive: TNotifyEvent read FOnActive write SetOnActive;
 
   end;
 
+  // extens TMenuItem do implements anonimous and Interfaced menu item;
   TPluginMenuItemInterf = class(TMenuItem)
   protected
     FProc: TProc<TObject>;
@@ -153,7 +211,7 @@ procedure Register;
 
 implementation
 
-uses IniFiles, IniFilesEx, System.uDebug, VCL.Menus.Helpers;
+uses IniFiles,{$ifdef USE_INIFILEEx} IniFilesEx,{$endif} System.uDebug, VCL.Menus.Helpers;
 
 var
   LPluginManager: TPluginManager;
@@ -163,8 +221,8 @@ begin
   RegisterComponents('Store', [TPluginManager]);
 end;
 
-procedure TPluginManager.RegisterAttributeControl(const ATypeID,ASubTypeID: Int64;
-  ADoExecute: IPluginExecute);
+procedure TPluginManager.NewAttributeControl(const ATypeID,
+  ASubTypeID: Int64; ADoExecute: IPluginExecute);
 var
   it: TPluginAttributeControl;
 begin
@@ -178,7 +236,7 @@ end;
 var
   itCount: Integer = 0;
 
-procedure TPluginManager.RegisterMenuItem(AMainMenu: TMainMenu;
+procedure TPluginManager.NewMenuItem(AMainMenu: TMainMenu;
   ADefaultMenu: TMenuItem; const APath, ACaption: string;
   ADoExecute: IPluginMenuItem; AProc: TProc<TObject>);
 var
@@ -210,7 +268,6 @@ begin
 
 end;
 
-
 function GetPluginManager: TPluginManager;
 begin
   result := LPluginManager;
@@ -222,14 +279,34 @@ function TPluginManagerIntf.Add(AHandle: THandle; AFilename: String;
 APlugins: IPluginItems): Integer;
 var
   p: TPluginInfo;
+  I: Integer;
 begin
   result := -1;
   p := TPluginInfo.Create;
   p.Handle := AHandle;
   p.Plugin := APlugins;
   p.Filename := AFilename;
+  for I := 0 to APlugins.Count - 1 do
+  begin
+    APlugins.GetItem(I).GetInterface.Connect(FConnectionName, FUser, FPass);
+    APlugins.GetItem(I).GetInterface.User(FFilial, FAppUser);
+  end;
   FList.Add(p);
   result := FList.Count - 1;
+end;
+
+procedure TPluginManagerIntf.Connect(const AConnectionName: string;
+const AUser: string; const APass: string);
+var
+  I, n: Integer;
+begin
+  FConnectionName := AConnectionName;
+  FUser := AUser;
+  FPass := APass;
+  for I := 0 to FList.Count - 1 do
+    for n := 0 to FList.Items[I].Plugin.Count - 1 do
+      FList.Items[I].Plugin.GetItem(n).GetInterface.Connect(FConnectionName,
+        FUser, FPass);
 end;
 
 function TPluginManagerIntf.Count: Integer;
@@ -259,12 +336,13 @@ begin
 end;
 
 function TPluginManagerIntf.Find(APlugin: string): TPluginInfo;
-var i : integer;
+var
+  I: Integer;
 begin
-    result := nil;
-    i := IndexOf(APlugin);
-    if i>=0 then
-       result := FList.Items[i];
+  result := nil;
+  I := IndexOf(APlugin);
+  if I >= 0 then
+    result := FList.Items[I];
 end;
 
 function TPluginManagerIntf.GetApplication: IPluginApplication;
@@ -281,7 +359,7 @@ function TPluginManagerIntf.LoadPlugin(APlugin: string): Integer;
 var
   F: function(APApplication: IPluginApplication): IPluginItems;
   H: THandle;
-  i: Integer;
+  I: Integer;
   itens: IPluginItems;
 begin
   result := -1;
@@ -302,37 +380,39 @@ begin
     end;
   end;
 end;
-function TPluginManagerIntf.LoadPlugins(AApplication
-  : IPluginApplication): Integer;
+
+function TPluginManagerIntf.Open(AApplication: IPluginApplication): Integer;
 begin
   result := LoadPlugins(ExtractFileName(ParamStr(0)), AApplication);
 end;
 
-function TPluginManagerIntf.LoadPlugins(APath: string;
+function TPluginManagerIntf.LoadPlugins(AFilename: string;
 AApplication: IPluginApplication): Integer;
 var
-  i, n: Integer;
+  I, n: Integer;
   F: string;
   achei: boolean;
 begin
 
   if assigned(AApplication) then
     SetApplication(AApplication);
-  if APath = '' then
-    APath := FPath;
+  if AFilename = '' then
+    AFilename := FFilename;
+  if FFilename = '' then
+    FFilename := AFilename;
   result := 0;
   with TIniFile.Create(FFilename) do
     try
       n := 0;
-      while readString(APath, 'Plugin' + intToStr(n), '*fim*') <> '*fim*' do
+      while readString(AFilename, 'Plugin' + intToStr(n), '*fim*') <> '*fim*' do
       begin
         try
-          F := readString(APath, 'Plugin' + intToStr(n), '');
+          F := readString(AFilename, 'Plugin' + intToStr(n), '');
           if fileExists(F) then
           begin
             achei := false;
-            for i := 0 to FList.Count - 1 do
-              if sametext(F, FList.Items[i].Filename) then
+            for I := 0 to FList.Count - 1 do
+              if sametext(F, FList.Items[I].Filename) then
               begin // check if repeat the same DLL
                 achei := true;
                 break;
@@ -354,45 +434,50 @@ begin
     end;
 end;
 
-function TPluginManagerIntf.IndexOf(APlugin: string): integer;
-var i:integer;
+function TPluginManagerIntf.IndexOf(APlugin: string): Integer;
+var
+  I: Integer;
 begin
   result := -1;
-  for I := 0 to FList.Count-1 do
-    if sametext(APlugin,FList.Items[i].Filename) then
-       begin
-         result := i;
-         exit;
-       end;
+  for I := 0 to FList.Count - 1 do
+    if sametext(APlugin, FList.Items[I].Filename) then
+    begin
+      result := I;
+      exit;
+    end;
 end;
 
 function TPluginManagerIntf.InstallPlugin(APlugin: string): Integer;
 var
-  i: Integer;
+  I: Integer;
   app: string;
-  info:TPluginInfo;
+  info: TPluginInfo;
 begin
   result := -1;
-  i := IndexOf(APlugin);
-  if i>=0 then
-     exit;
+  I := IndexOf(APlugin);
+  if I >= 0 then
+    exit;
 
   result := LoadPlugin(APlugin);
   if result >= 0 then
   begin
+    I := 0;
     app := ExtractFileName(ParamStr(0));
     with TIniFile.Create(FFilename) do
       try
-        while readString(app, 'Plugin' + intToStr(i), '') <> '' do
-          inc(i);
-        WriteString(app, 'Plugin' + intToStr(i), APlugin);
+        while readString(app, 'Plugin' + intToStr(I), '') <> '' do
+          inc(I);
+        WriteString(app, 'Plugin' + intToStr(I), APlugin);
       finally
         Free;
       end;
 
-    info := find(APlugin);
+    info := Find(APlugin);
     if assigned(info) then
-       info.Plugin.Install;
+    begin
+      info.Plugin.Connect(FConnectionName, FUser, FPass);
+      info.Plugin.Install;
+    end;
 
   end;
 end;
@@ -408,17 +493,26 @@ begin
   FFilename := AFilename;
 end;
 
-procedure TPluginManagerIntf.SetPath(const Value: string);
+procedure TPluginManagerIntf.UnInstallPlugin(APlugin: string);
+var
+  info: TPluginInfo;
 begin
-  FPath := Value;
+  info := Find(APlugin);
+  if assigned(info) then
+    info.Plugin.UnInstall;
 end;
 
-procedure TPluginManagerIntf.UnInstallPlugin(APlugin: string);
-var info:TPluginInfo;
+procedure TPluginManagerIntf.User(const AFilial: Integer;
+const AAppUser: string);
+var
+  I, n: Integer;
 begin
-   info := Find(APlugin);
-   if assigned(info) then
-      info.Plugin.UnInstall;
+  FFilial := AFilial;
+  FAppUser := AAppUser;
+  for I := 0 to FList.Count - 1 do
+    for n := 0 to FList.Items[I].Plugin.Count - 1 do
+      FList.Items[I].Plugin.GetItem(n).GetInterface.User(FFilial, FAppUser);
+
 end;
 
 { TPluginInfo }
@@ -435,10 +529,10 @@ var
 begin
   if Handle > 0 then
     try
-      Plugin := nil;
       @p := GetProcAddress(Handle, 'UnloadPlugin');
       if assigned(p) then
         p;
+      Plugin := nil;
       FreeLibrary(Handle);
     except
     end;
@@ -447,44 +541,73 @@ end;
 
 { TPluginMananer }
 
+procedure TPluginManager.Connect(const AConnectionName, AUser, APass: string);
+begin
+  Plugins.Connect(AConnectionName, AUser, APass);
+end;
+
 constructor TPluginManager.Create(ow: TComponent);
 begin
   inherited;
+  PluginApplication := self;
   FPlugins := TPluginManagerIntf.Create;
   FAttributeControls := TObjectList<TPluginAttributeControl>.Create;
 end;
 
 destructor TPluginManager.Destroy;
 var
-  i: Integer;
+  I: Integer;
 begin
-  for i := 0 to FAttributeControls.Count - 1 do
-    FAttributeControls.Items[i].PluginExecute := nil;
+  // for i := 0 to FAttributeControls.Count - 1 do
+  // FAttributeControls.Items[i].PluginExecute := nil;
   FAttributeControls.Free;
   FPlugins.Free;
   inherited;
 end;
 
-procedure TPluginManager.EmbbedControl(AParentHandle:THandle; AControlID, AControlType: Int64);
-var i:integer;
+procedure TPluginManager.EmbbedControl(AControlID, AControlType: Int64;
+AProc: TProc<IPluginExecute>);
+var
+  I: Integer;
+  intf: IPluginExecute;
 begin
-  for I := 0 to FAttributeControls.count -1 do
-  with FAttributeControls.Items[i] do
-    if (TypeID = AControlID) and (SubTypeID=AControlType) then
-    begin
-       FAttributeControls.Items[i].PluginExecute.Embedded(AParentHandle);
-    end;
+  for I := 0 to FAttributeControls.Count - 1 do
+    with FAttributeControls.Items[I] do
+      if (TypeID = AControlID) and (SubTypeID = AControlType) then
+      begin
+        intf := PluginExecute;
+        AProc(intf);
+      end;
 
 end;
 
-function TPluginManager.GetPluginPath: string;
+function TPluginManager.GetFileName: string;
 begin
-  result := FPlugins.Path;
+  result := FPlugins.Filename;
+end;
+
+procedure TPluginManager.NewEmbbedControl(AParentHandle: THandle;
+AControlID, AControlType: Int64);
+var
+  I: Integer;
+begin
+  for I := 0 to FAttributeControls.Count - 1 do
+    with FAttributeControls.Items[I] do
+      if (TypeID = AControlID) and (SubTypeID = AControlType) then
+      begin
+        FAttributeControls.Items[I].PluginExecute.Embedded(AParentHandle);
+      end;
+
 end;
 
 function TPluginManager.LoadPlugins(APlugin: string): Integer;
 begin
   result := FPlugins.LoadPlugin(APlugin);
+end;
+
+procedure TPluginManager.Open(AApp: IPluginApplication);
+begin
+  Plugins.Open(AApp);
 end;
 
 function TPluginManager.InstallPlugin(APlugin: string): Integer;
@@ -494,9 +617,22 @@ end;
 
 procedure TPluginManager.SetActive(const Value: boolean);
 begin
+  if not assigned(PluginApplication) then
+    raise Exception.Create('Não inicializou o objeto PluginApplication');
+  if Value then
+    if not(csDesigning in ComponentState) then
+    begin
+      FPlugins.Open(PluginApplication);
+      if assigned(FOnActive) then
+        FOnActive(self);
+    end;
   FActive := Value;
-  if Value and assigned(FOnActive) then
-    FOnActive(self);
+
+end;
+
+procedure TPluginManager.SetFileName(const Value: string);
+begin
+  FPlugins.Filename := Value;
 end;
 
 procedure TPluginManager.SetOnActive(const Value: TNotifyEvent);
@@ -504,14 +640,14 @@ begin
   FOnActive := Value;
 end;
 
-procedure TPluginManager.SetPluginPath(const Value: string);
-begin
-  FPlugins.Path := Value;
-end;
-
 procedure TPluginManager.UnInstallPlugin(APlugin: string);
 begin
-   FPlugins.UnInstallPlugin(APlugin);
+  FPlugins.UnInstallPlugin(APlugin);
+end;
+
+procedure TPluginManager.User(const AFilial: Integer; const AAppUser: string);
+begin
+  Plugins.User(AFilial, AAppUser);
 end;
 
 { TMenuItemInterf }
@@ -527,6 +663,48 @@ end;
 procedure TPluginMenuItemInterf.DoClick(Sender: TObject);
 begin
   FProc(self);
+end;
+
+{ TPluginApplication }
+
+procedure TPluginManager.RegisterAttributeControl(const AType,
+  ASubType: Int64; ADoExecute: IPluginControl);
+begin
+  if assigned(FonRegisterControl) then
+    FonRegisterControl(AType, ASubType, ADoExecute);
+
+end;
+
+procedure TPluginManager.RegisterMenuItem(const AParentMenuItemName,
+  ACaption: string; ADoExecute: IPluginMenuItem);
+begin
+  if assigned(FonRegisterMenuItem) then
+    FonRegisterMenuItem(AParentMenuItemName, ACaption, ADoExecute);
+end;
+
+procedure TPluginManager.RegisterToolbarItem(const AParentItemName,
+  ACaption: string; ADoExecute: IPluginToolbarItem);
+begin
+  if assigned(FonRegisterToolbarItem) then
+    FonRegisterToolbarItem(AParentItemName, ACaption, ADoExecute);
+end;
+
+procedure TPluginManager.SetonRegisterControl
+  (const Value: TPluginApplicationControlEvent);
+begin
+  FonRegisterControl := Value;
+end;
+
+procedure TPluginManager.SetonRegisterMenuItem
+  (const Value: TPluginApplicationMenuItemEvent);
+begin
+  FonRegisterMenuItem := Value;
+end;
+
+procedure TPluginManager.SetonRegisterToolbarItem
+  (const Value: TPluginApplicationToolbarItemEvent);
+begin
+  FonRegisterToolbarItem := Value;
 end;
 
 initialization
