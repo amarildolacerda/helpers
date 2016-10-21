@@ -35,7 +35,7 @@ type
   protected
     FSubTypeID: Int64;
     FParams: String;
-    FConnectionName: string;
+    FConnectionString: string;
     FUser, FPass: string;
     FFilial: integer;
     FAppUser: string;
@@ -51,8 +51,7 @@ type
     { function GetHandle:THandle;
       procedure SetHandle(AHandle:THandle);
     }
-    procedure Connect(const AAlias: string; const AUser: string;
-      const APass: string); virtual;
+    procedure Connection(const AConnectionString:string); virtual;
     procedure User(const AFilial: integer; const AAppUser: string); virtual;
     procedure Sync(const AJson: string); virtual;
     procedure Execute(const AModal: boolean); virtual;
@@ -82,21 +81,17 @@ implementation
 
 uses System.classes.Helper, System.Rtti;
 
-procedure TPluginExecuteService.Connect(const AAlias, AUser, APass: string);
+procedure TPluginExecuteService.Connection(const AConnectionString:string);
 begin
-  FConnectionName := AAlias;
-  FUser := AUser;
-  FPass := APass;
+  FConnectionString := AConnectionString;
   if not assigned(FForm) then
     exit;
   if Supports(FForm, IPluginExecuteBase) then
-    (FForm as IPluginExecuteBase).Connect(AAlias, AUser, APass)
+    (FForm as IPluginExecuteBase).Connection(AConnectionString)
   else
   begin
     // DO NOT CHANGE NAMES
-    FForm.Properties['ConnectionName'] := AAlias;
-    FForm.Properties['DbUserName'] := AUser;
-    FForm.Properties['DbPassword'] := APass;
+    FForm.Properties['ConnectionString'] := AConnectionString;
   end;
 end;
 
@@ -171,7 +166,7 @@ begin
   if assigned(FForm) then
     FreeAndNil(FForm);
   FForm := Value;
-  Connect(FConnectionName, FUser, FPass);
+  Connection(FConnectionString);
   User(FFilial, FAppUser);
 
 end;

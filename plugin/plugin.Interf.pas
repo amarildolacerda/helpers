@@ -70,7 +70,7 @@ type
     ['{756E63BE-4C02-46AF-85AD-87BDB657201F}']
     function Count: integer;
     function GetItem(idx: integer): IPluginInfo;
-    procedure Connect(const AConnectionName: string; const AUser: string; const APass: string);
+    procedure Connection(const AConnectionString: string);
     procedure Install;
     procedure UnInstall;
   end;
@@ -87,7 +87,7 @@ type
     function GetCaption: string;
     function GetTypeID: Int64;
     procedure SetTypeID(const ATypeID:Int64);
-    procedure Connect(const AConnectionName: string; const AUser: string; const APass: string);
+    procedure Connection(const AConnectionString:string);
     procedure SetParams( AJsonParams:String );
     procedure User(const AFilial: integer; const AAppUser: string);
     procedure Sync(const AJson: string);

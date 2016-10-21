@@ -66,17 +66,14 @@ type
     function Open(AApplication: IPluginApplication): Integer; overload;
     function InstallPlugin(APlugin: string): Integer;
     procedure UnInstallPlugin(APlugin: string);
-    procedure Connect(const AConnectionName: string; const AUser: string;
-      const APass: string);
+    procedure Connection(const AConnectionString: string);
     procedure User(const AFilial: Integer; const AAppUser: string);
   end;
 
   TPluginManagerIntf = class(TInterfacedObject, IPluginManager)
   private
     FFilename: string;
-    FConnectionName: string;
-    FUser: String;
-    FPass: String;
+    FConnectionString: string;
     FAppUser: string;
     FFilial: Integer;
   protected
@@ -97,8 +94,7 @@ type
     function LoadPlugins(AFilename: string; AApplication: IPluginApplication)
       : Integer; overload;
 
-    procedure Connect(const AConnectionName: string; const AUser: string;
-      const APass: string);
+    procedure Connection(const AConnectionString: string);
     procedure User(const AFilial: Integer; const AAppUser: string);
     function Open(AApplication: IPluginApplication): Integer; overload;
 
@@ -175,8 +171,7 @@ type
 
     // operations
     procedure Open(AApp: IPluginApplication);
-    procedure Connect(const AConnectionName: string; const AUser: string;
-      const APass: string);
+    procedure Connection(const AConnectionString:String);
     procedure User(const AFilial: Integer; const AAppUser: string);
 
   published
@@ -211,7 +206,8 @@ procedure Register;
 
 implementation
 
-uses IniFiles,{$ifdef USE_INIFILEEx} IniFilesEx,{$endif} System.uDebug, VCL.Menus.Helpers;
+uses {$ifndef DLL} plugin.Service,  {$endif}
+ IniFiles,{$ifdef USE_INIFILEEx} IniFilesEx,{$endif} System.uDebug, VCL.Menus.Helpers;
 
 var
   LPluginManager: TPluginManager;
@@ -288,25 +284,21 @@ begin
   p.Filename := AFilename;
   for I := 0 to APlugins.Count - 1 do
   begin
-    APlugins.GetItem(I).GetInterface.Connect(FConnectionName, FUser, FPass);
+    APlugins.GetItem(I).GetInterface.Connection(FConnectionString);
     APlugins.GetItem(I).GetInterface.User(FFilial, FAppUser);
   end;
   FList.Add(p);
   result := FList.Count - 1;
 end;
 
-procedure TPluginManagerIntf.Connect(const AConnectionName: string;
-const AUser: string; const APass: string);
+procedure TPluginManagerIntf.Connection(const AConnectionString: string);
 var
   I, n: Integer;
 begin
-  FConnectionName := AConnectionName;
-  FUser := AUser;
-  FPass := APass;
+  FConnectionString := AConnectionString;
   for I := 0 to FList.Count - 1 do
     for n := 0 to FList.Items[I].Plugin.Count - 1 do
-      FList.Items[I].Plugin.GetItem(n).GetInterface.Connect(FConnectionName,
-        FUser, FPass);
+      FList.Items[I].Plugin.GetItem(n).GetInterface.Connection(FConnectionString);
 end;
 
 function TPluginManagerIntf.Count: Integer;
@@ -382,7 +374,18 @@ begin
 end;
 
 function TPluginManagerIntf.Open(AApplication: IPluginApplication): Integer;
+{$ifndef DLL}
+var n,i:integer;
+    it:IPluginItems;
 begin
+   it := GetPluginItems;
+   if assigned(it) then
+   with GetPluginItems do
+    for I := 0 to Count-1  do
+      GetItem(I).DoStart;
+{$else}
+begin
+{$endif}
   result := LoadPlugins(ExtractFileName(ParamStr(0)), AApplication);
 end;
 
@@ -475,7 +478,7 @@ begin
     info := Find(APlugin);
     if assigned(info) then
     begin
-      info.Plugin.Connect(FConnectionName, FUser, FPass);
+      info.Plugin.Connection(FConnectionString);
       info.Plugin.Install;
     end;
 
@@ -541,9 +544,9 @@ end;
 
 { TPluginMananer }
 
-procedure TPluginManager.Connect(const AConnectionName, AUser, APass: string);
+procedure TPluginManager.Connection(const AConnectionString:string);
 begin
-  Plugins.Connect(AConnectionName, AUser, APass);
+  Plugins.Connection(AConnectionString);
 end;
 
 constructor TPluginManager.Create(ow: TComponent);
@@ -558,8 +561,6 @@ destructor TPluginManager.Destroy;
 var
   I: Integer;
 begin
-  // for i := 0 to FAttributeControls.Count - 1 do
-  // FAttributeControls.Items[i].PluginExecute := nil;
   FAttributeControls.Free;
   FPlugins.Free;
   inherited;

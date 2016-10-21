@@ -48,7 +48,7 @@ Type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Connect(const AAlias: string; const AUser: string; const APass: string);virtual;
+    procedure Connection(const AConnectionString:string);virtual;
     function Count: integer;
     function GetItem(idx: integer): IPluginInfo;
     procedure Add(APlugin: IPluginInfo);
@@ -95,7 +95,7 @@ uses System.Classes, System.SysUtils;
 
 var
   LPlugin: TPluginItemsInterfaced;
-  PluginService: IPluginInfo;
+  //PluginService: IPluginInfo;
   LPluginClass: TPluginItemsInterfacedClass;
 
 procedure RegisterPluginClass(AClass: TPluginItemsInterfacedClass);
@@ -163,7 +163,7 @@ end;
 constructor TPluginService.Create;
 begin
   inherited;
-  PluginService := self;
+  //PluginService := self;
 end;
 
 procedure TPluginService.Embedded(const AParent: THandle);
@@ -190,8 +190,9 @@ end;
 
 procedure UnloadPlugin;
 begin
-  //LPlugin := nil;
-  // PluginApplication := nil;
+  {$ifdef DLL}
+  {$else}
+  {$endif}
 end;
 
 procedure RegisterPlugin(AInfo: IPluginInfo);
@@ -208,7 +209,7 @@ begin
   FItems.Add(APlugin);
 end;
 
-procedure TPluginItemsInterfaced.Connect(const AAlias, AUser, APass: string);
+procedure TPluginItemsInterfaced.Connection(const AConnectionString:string);
 begin
 
 end;
@@ -263,6 +264,9 @@ initialization
 RegisterPluginClass(TPluginItemsInterfaced);
 
 finalization
+{$ifdef DLL}
   LPlugin := nil;
-
+{$else}
+  FreeAndNil(LPlugin)
+{$endif}
 end.
