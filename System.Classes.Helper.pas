@@ -50,11 +50,11 @@ Type
 
   TObjectHelper = class helper for TObject
   private
-    function GetProperties(AName: string): TValue;
-    procedure SetProperties(AName: string; const Value: TValue);
-    function GetFields(AName: string): TValue;
-    procedure SetFields(AName: string; const Value: TValue);
-    function GetMethods(AName: String): TRttiMethod;
+    function GetContextProperties(AName: string): TValue;
+    procedure SetContextProperties(AName: string; const Value: TValue);
+    function GetContextFields(AName: string): TValue;
+    procedure SetContextFields(AName: string; const Value: TValue);
+    function GetContextMethods(AName: String): TRttiMethod;
   public
     // metodos anonimous
     class procedure Using<T>(O: T; Proc: TProc<T>); static;
@@ -78,32 +78,32 @@ Type
     class function FromJson<T:Class, constructor>(AJson:string):T;overload;static;
 
     // RTTI
-    function PropertyCount: Integer;
-    function PropertyName(idx: Integer): string;
-    property Properties[AName: string]: TValue read GetProperties
-      write SetProperties;
-    function IsProperty(AName:String):boolean;
-    procedure GetPropertiesList(AList: TStrings;
+    function ContextPropertyCount: Integer;
+    function ContextPropertyName(idx: Integer): string;
+    property ContextProperties[AName: string]: TValue read GetContextProperties
+      write SetContextProperties;
+    function IsContextProperty(AName:String):boolean;
+    procedure GetContextPropertiesList(AList: TStrings;
       const AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
-    procedure GetPropertiesItems(AList: TStrings;
+    procedure GetContextPropertiesItems(AList: TStrings;
       const AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
 
-    function FieldsCount: Integer;
-    function FieldName(idx: Integer): string;
-    property Fields[AName: string]: TValue read GetFields write SetFields;
-    procedure GetFieldsList(AList: TStrings;
+    function &ContextFieldsCount: Integer;
+    function &ContextFieldName(idx: Integer): string;
+    property ContextFields[AName: string]: TValue read GetContextFields write SetContextFields;
+    procedure &ContextGetFieldsList(AList: TStrings;
       const AVisibility: TMemberVisibilitySet = [mvPublic]);
 
-    property Methods[AName: String]: TRttiMethod read GetMethods;
-    procedure GetMethodsList(AList: TStrings;
+    property ContextMethods[AName: String]: TRttiMethod read GetContextMethods;
+    procedure GetContextMethodsList(AList: TStrings;
       const AVisibility: TMemberVisibilitySet = [mvPublic]);
 
-    function HasAttribute(aMethod: TRttiMethod;
+    function ContextHasAttribute(aMethod: TRttiMethod;
       attribClass: TCustomAttributeClass): Boolean;
 
-    function InvokeAttribute(attribClass: TCustomAttributeClass;
+    function ContextInvokeAttribute(attribClass: TCustomAttributeClass;
       params: array of TValue): Boolean;
-    function InvokeMethod(AName: string; params: array of TValue): Boolean;
+    function ContextInvokeMethod(AName: string; params: array of TValue): Boolean;
 
   end;
 
@@ -168,7 +168,7 @@ begin
   FireEvent(self);
 end;
 
-function TObjectHelper.FieldName(idx: Integer): string;
+function TObjectHelper.&ContextFieldName(idx: Integer): string;
 var
   aCtx: TRttiContext;
 begin
@@ -180,7 +180,7 @@ begin
   end;
 end;
 
-function TObjectHelper.FieldsCount: Integer;
+function TObjectHelper.&ContextFieldsCount: Integer;
 var
   aCtx: TRttiContext;
 begin
@@ -204,7 +204,7 @@ begin
    result := TJson.JsonToObject<T>(AJson);
 end;
 
-function TObjectHelper.GetFields(AName: string): TValue;
+function TObjectHelper.GetContextFields(AName: string): TValue;
 var
   aCtx: TRttiContext;
   AField: TRttiField;
@@ -220,7 +220,7 @@ begin
   end;
 end;
 
-procedure TObjectHelper.GetFieldsList(AList: TStrings;
+procedure TObjectHelper.&ContextGetFieldsList(AList: TStrings;
 const AVisibility: TMemberVisibilitySet = [mvPublic]);
 var
   aCtx: TRttiContext;
@@ -239,7 +239,7 @@ begin
   end;
 end;
 
-function TObjectHelper.GetMethods(AName: String): TRttiMethod;
+function TObjectHelper.GetContextMethods(AName: String): TRttiMethod;
 var
   aCtx: TRttiContext;
 begin
@@ -251,7 +251,7 @@ begin
   end;
 end;
 
-procedure TObjectHelper.GetMethodsList(AList: TStrings;
+procedure TObjectHelper.GetContextMethodsList(AList: TStrings;
 const AVisibility: TMemberVisibilitySet = [mvPublic]);
 var
   aMethod: TRttiMethod;
@@ -270,7 +270,7 @@ begin
   end;
 end;
 
-function TObjectHelper.GetProperties(AName: string): TValue;
+function TObjectHelper.GetContextProperties(AName: string): TValue;
 var
   aCtx: TRttiContext;
   aProperty: TRttiProperty;
@@ -357,7 +357,7 @@ begin
   TryISO8601ToDate(DateTimeAsString, result);
 end;
 
-procedure TObjectHelper.GetPropertiesItems(AList: TStrings;
+procedure TObjectHelper.GetContextPropertiesItems(AList: TStrings;
   const AVisibility: TMemberVisibilitySet);
 var
   aCtx: TRttiContext;
@@ -388,7 +388,7 @@ begin
 
 end;
 
-procedure TObjectHelper.GetPropertiesList(AList: TStrings;
+procedure TObjectHelper.GetContextPropertiesList(AList: TStrings;
 const AVisibility: TMemberVisibilitySet = [mvPublished, mvPublic]);
 var
   aCtx: TRttiContext;
@@ -411,7 +411,7 @@ begin
 
 end;
 
-function TObjectHelper.HasAttribute(aMethod: TRttiMethod;
+function TObjectHelper.ContextHasAttribute(aMethod: TRttiMethod;
 attribClass: TCustomAttributeClass): Boolean;
 var
   attributes: TArray<TCustomAttribute>;
@@ -424,7 +424,7 @@ begin
       Exit(True);
 end;
 
-function TObjectHelper.InvokeAttribute(attribClass: TCustomAttributeClass;
+function TObjectHelper.ContextInvokeAttribute(attribClass: TCustomAttributeClass;
 params: array of TValue): Boolean;
 var
   aCtx: TRttiContext;
@@ -435,7 +435,7 @@ begin
   try
     for aMethod in aCtx.GetType(self.ClassType).GetMethods do
     begin
-      if HasAttribute(aMethod, attribClass) then
+      if ContextHasAttribute(aMethod, attribClass) then
       begin
         aMethod.Invoke(self, params);
         result := True;
@@ -447,12 +447,12 @@ begin
 
 end;
 
-function TObjectHelper.InvokeMethod(AName: string;
+function TObjectHelper.ContextInvokeMethod(AName: string;
 params: array of TValue): Boolean;
 var
   aMethod: TRttiMethod;
 begin
-  aMethod := Methods[AName];
+  aMethod := ContextMethods[AName];
   if not assigned(aMethod) then
     Exit(False);
   try
@@ -461,14 +461,14 @@ begin
   end;
 end;
 
-function TObjectHelper.IsProperty(AName: String): boolean;
+function TObjectHelper.IsContextProperty(AName: String): boolean;
 var v:TValue;
 begin
-   v := Properties[AName];
+   v := ContextProperties[AName];
    result := not v.IsEmpty;
 end;
 
-function TObjectHelper.PropertyCount: Integer;
+function TObjectHelper.ContextPropertyCount: Integer;
 var
   aCtx: TRttiContext;
 begin
@@ -480,7 +480,7 @@ begin
   end;
 end;
 
-function TObjectHelper.PropertyName(idx: Integer): string;
+function TObjectHelper.ContextPropertyName(idx: Integer): string;
 var
   aCtx: TRttiContext;
 begin
@@ -529,7 +529,7 @@ begin
     end).Start;
 end;
 
-procedure TObjectHelper.SetFields(AName: string; const Value: TValue);
+procedure TObjectHelper.SetContextFields(AName: string; const Value: TValue);
 var
   AField: TRttiField;
   aCtx: TRttiContext;
@@ -544,7 +544,7 @@ begin
   end;
 end;
 
-procedure TObjectHelper.SetProperties(AName: string; const Value: TValue);
+procedure TObjectHelper.SetContextProperties(AName: string; const Value: TValue);
 var
   aProperty: TRttiProperty;
   aCtx: TRttiContext;
