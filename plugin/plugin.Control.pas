@@ -24,6 +24,7 @@ begin
   inherited create(AFormClass, ACaption);
   TypeID := ATypeID;
   subTypeID := ASubTypeID;
+
 end;
 
 procedure TPluginControlService.DoStart;

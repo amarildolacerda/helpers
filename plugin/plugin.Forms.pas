@@ -51,7 +51,7 @@ type
     { function GetHandle:THandle;
       procedure SetHandle(AHandle:THandle);
     }
-    procedure Connection(const AConnectionString:string); virtual;
+    procedure Connection(const AConnectionString: string); virtual;
     procedure User(const AFilial: integer; const AAppUser: string); virtual;
     procedure Sync(const AJson: string); virtual;
     procedure Execute(const AModal: boolean); virtual;
@@ -72,6 +72,8 @@ type
     procedure Init; virtual;
   public
     constructor Create(AFormClass: TFormClass; ACaption: String); virtual;
+    function GetCaption: string; override;
+
     procedure Execute(const AModal: boolean); override;
     procedure Embedded(const AParent: THandle); override;
     procedure DoStart; override;
@@ -81,7 +83,7 @@ implementation
 
 uses System.classes.Helper, System.Rtti;
 
-procedure TPluginExecuteService.Connection(const AConnectionString:string);
+procedure TPluginExecuteService.Connection(const AConnectionString: string);
 begin
   FConnectionString := AConnectionString;
   if not assigned(FForm) then
@@ -91,7 +93,7 @@ begin
   else
   begin
     // DO NOT CHANGE NAMES
-    FForm.Properties['ConnectionString'] := AConnectionString;
+    FForm.ContextProperties['ConnectionString'] := AConnectionString;
   end;
 end;
 
@@ -194,7 +196,7 @@ begin
     (FForm as IPluginExecuteBase).Sync(AJson)
   else
   begin
-    FForm.InvokeMethod('Sync', [AJson]);
+    FForm.ContextInvokeMethod('Sync', [AJson]);
   end;
 end;
 
@@ -209,8 +211,8 @@ begin
     (FForm as IPluginExecuteBase).User(AFilial, AAppUser)
   else
   begin
-    FForm.Properties['Filial'] := AFilial;
-    FForm.Properties['Usuario'] := AAppUser;
+    FForm.ContextProperties['Filial'] := AFilial;
+    FForm.ContextProperties['Usuario'] := AAppUser;
   end;
 end;
 
@@ -239,6 +241,14 @@ begin
   Init;
   inherited;
 
+end;
+
+function TPluginFormService.GetCaption: string;
+begin
+  if FCaption <> '' then
+    result := FCaption
+  else
+    result := inherited GetCaption;
 end;
 
 procedure TPluginFormService.Init;

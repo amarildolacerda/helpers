@@ -146,6 +146,7 @@ type
   public
     constructor Create(ow: TComponent); override;
     destructor Destroy; override;
+    procedure Perform(ATypeID:Int64; AMsg: Cardinal; WParam: NativeUInt; LParam: NativeUInt);
 
     // default create item
     procedure NewMenuItem(AMainMenu: TMainMenu; ADefaultMenu: TMenuItem;
@@ -190,7 +191,7 @@ type
 
   end;
 
-  // extens TMenuItem do implements anonimous and Interfaced menu item;
+  // extens TMenuItem to implements anonimous and Interfaced menu item;
   TPluginMenuItemInterf = class(TMenuItem)
   protected
     FProc: TProc<TObject>;
@@ -398,7 +399,7 @@ var
 begin
 
   if assigned(AApplication) then
-    SetApplication(AApplication);
+       SetApplication(AApplication);
   if AFilename = '' then
     AFilename := FFilename;
   if FFilename = '' then
@@ -488,7 +489,8 @@ end;
 procedure TPluginManagerIntf.SetApplication(const AApplication
   : IPluginApplication);
 begin
-  PluginApplication := AApplication;
+  if AApplication<>PluginApplication then
+     PluginApplication := AApplication;
 end;
 
 procedure TPluginManagerIntf.SetFileName(AFilename: string);
@@ -609,6 +611,20 @@ end;
 procedure TPluginManager.Open(AApp: IPluginApplication);
 begin
   Plugins.Open(AApp);
+end;
+
+procedure TPluginManager.Perform(ATypeID:Int64; AMsg: Cardinal; WParam, LParam: NativeUInt);
+var i,n:integer;
+    intf:IPluginInfo;
+begin
+   for I := 0 to Plugins.Count-1 do
+    for n := 0 to Plugins.GetItem(i).Count-1 do
+    begin
+       intf := Plugins.GetItem(I).GetItem(n);
+       if (ATypeID=0) or (ATypeID=intf.GetTypeID) then
+          intf.GetInterface.Perform(AMsg,WParam,LParam);
+    end;
+
 end;
 
 function TPluginManager.InstallPlugin(APlugin: string): Integer;

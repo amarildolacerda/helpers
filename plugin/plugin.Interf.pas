@@ -71,6 +71,8 @@ type
     function Count: integer;
     function GetItem(idx: integer): IPluginInfo;
     procedure Connection(const AConnectionString: string);
+    procedure Add( AInfo:IPluginInfo);
+
     procedure Install;
     procedure UnInstall;
   end;
@@ -91,6 +93,7 @@ type
     procedure SetParams( AJsonParams:String );
     procedure User(const AFilial: integer; const AAppUser: string);
     procedure Sync(const AJson: string);
+    procedure Perform(AMsg:Cardinal;WParam:NativeUInt;LParam:NativeUInt);
     // {"control":xxx,...."operation":"open"}  // TPluginOperation = (open,close,edit,insert,post,delete)
     function CanClose: Boolean;
   end;

@@ -2,8 +2,6 @@
 <BorlandProject>
 	<Transactions>
     <Transaction>2016/10/17 21:52:30.000.501,C:\Fontes\plugin\sample\PluginExecuteSimple.dproj=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Project5.dproj</Transaction>
-    <Transaction>2016/10/17 21:52:46.000.325,=C:\Fontes\plugin\sample\Unit2.pas</Transaction>
-    <Transaction>2016/10/17 21:53:07.000.421,C:\Fontes\plugin\sample\uExecutePluignSimple.pas=C:\Fontes\plugin\sample\Unit2.pas</Transaction>
     <Transaction>2016/10/17 21:53:07.000.421,C:\Fontes\plugin\sample\uExecutePluignSimple.dfm=C:\Fontes\plugin\sample\Unit2.dfm</Transaction>
   </Transactions>
 </BorlandProject>

@@ -14,7 +14,8 @@ uses
   System.SysUtils,
   System.Classes,
   uMenuItemSimple in 'uMenuItemSimple.pas' {Form1},
-  plugin.Control in '..\plugin.Control.pas';
+  plugin.Control in '..\plugin.Control.pas',
+  plugin.Service in '..\plugin.Service.pas';
 
 {$R *.res}
 

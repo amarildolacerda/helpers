@@ -36,7 +36,7 @@ unit Plugin.Service;
 interface
 
 uses WinApi.Windows, VCL.Forms, VCL.Controls, Plugin.Interf,
-  System.Generics.collections;
+     System.Generics.collections;
 
 Type
   // List of plugins
@@ -48,7 +48,7 @@ Type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Connection(const AConnectionString:string);virtual;
+    procedure Connection(const AConnectionString: string); virtual;
     function Count: integer;
     function GetItem(idx: integer): IPluginInfo;
     procedure Add(APlugin: IPluginInfo);
@@ -65,6 +65,8 @@ Type
     FOwned: boolean;
     function GetTypeID: Int64; virtual;
     procedure SetTypeID(const Value: Int64); virtual;
+    procedure Perform(AMsg: Cardinal; WParam: NativeUInt; LParam: NativeUInt);
+
   public
     constructor Create; overload;
     destructor Destroy; override;
@@ -87,15 +89,15 @@ function LoadPlugin(AAplication: IPluginApplication): IPluginItems;
 // exported unload plugins
 procedure UnloadPlugin;
 
-function GetPluginItems: TPluginItemsInterfaced;
+function GetPluginItems: IPluginItems;
 
 implementation
 
 uses System.Classes, System.SysUtils;
 
 var
-  LPlugin: TPluginItemsInterfaced;
-  //PluginService: IPluginInfo;
+  LPlugin: IPluginItems; // TPluginItemsInterfaced;
+  // PluginService: IPluginInfo;
   LPluginClass: TPluginItemsInterfacedClass;
 
 procedure RegisterPluginClass(AClass: TPluginItemsInterfacedClass);
@@ -103,7 +105,7 @@ begin
   LPluginClass := AClass;
 end;
 
-function GetPluginItems: TPluginItemsInterfaced;
+function GetPluginItems: IPluginItems;
 begin
   result := LPlugin;
 end;
@@ -137,6 +139,12 @@ begin
     result := FForm.Caption;
 end;
 
+procedure TPluginService.Perform(AMsg: Cardinal; WParam, LParam: NativeUInt);
+begin
+  if assigned(FForm) then
+    FForm.Perform(AMsg, WParam, LParam)
+end;
+
 procedure TPluginService.SetTypeID(const Value: Int64);
 begin
   FTypeID := Value;
@@ -163,7 +171,7 @@ end;
 constructor TPluginService.Create;
 begin
   inherited;
-  //PluginService := self;
+  // PluginService := self;
 end;
 
 procedure TPluginService.Embedded(const AParent: THandle);
@@ -173,8 +181,11 @@ begin
 
   WinApi.Windows.SetParent(FForm.Handle, AParent);
   FForm.BorderStyle := bsNone;
-  FForm.Show;
+  FForm.Left := 0;
+  FForm.Top := 0;
   FForm.Align := alClient;
+  FForm.Show;
+  ShowWindowAsync(FForm.Handle, SW_MAXIMIZE);
 
 end;
 
@@ -190,9 +201,9 @@ end;
 
 procedure UnloadPlugin;
 begin
-  {$ifdef DLL}
-  {$else}
-  {$endif}
+{$IFDEF DLL}
+{$ELSE}
+{$ENDIF}
 end;
 
 procedure RegisterPlugin(AInfo: IPluginInfo);
@@ -209,7 +220,7 @@ begin
   FItems.Add(APlugin);
 end;
 
-procedure TPluginItemsInterfaced.Connection(const AConnectionString:string);
+procedure TPluginItemsInterfaced.Connection(const AConnectionString: string);
 begin
 
 end;
@@ -264,9 +275,9 @@ initialization
 RegisterPluginClass(TPluginItemsInterfaced);
 
 finalization
-{$ifdef DLL}
-  LPlugin := nil;
-{$else}
-  FreeAndNil(LPlugin)
-{$endif}
+
+{$IFDEF DLL}
+// LPlugin := nil;
+{$ENDIF}
+
 end.
