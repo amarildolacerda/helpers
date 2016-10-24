@@ -31,21 +31,22 @@
 
 }
 
-unit Plugin.Manager;
+unit plugin.Manager;
 
 {$I plugin.inc}
 
 interface
 
 uses
-  Windows, System.Classes, System.SysUtils, Plugin.Interf,
-  VCL.Menus, System.Generics.Collections;
+
+  Windows, System.Classes, System.SysUtils, plugin.Interf,
+{$IFDEF FMX} FXM.Menus, {$ELSE} VCL.Menus, {$ENDIF} System.Generics.Collections;
 
 type
   TPluginInfo = class
   public
     Handle: THandle;
-    Plugin: IPluginItems;
+    plugin: IPluginItems;
     Filename: string;
     constructor Create;
     destructor Destroy; override;
@@ -146,14 +147,15 @@ type
   public
     constructor Create(ow: TComponent); override;
     destructor Destroy; override;
-    procedure Perform(ATypeID:Int64; AMsg: Cardinal; WParam: NativeUInt; LParam: NativeUInt);
+    procedure Perform(ATypeID: Int64; AMsg: Cardinal; WParam: NativeUInt;
+      LParam: NativeUInt);
 
     // default create item
     procedure NewMenuItem(AMainMenu: TMainMenu; ADefaultMenu: TMenuItem;
       const APath, ACaption: string; ADoExecute: IPluginMenuItem;
-      AProc: TProc<TObject>);overload;
+      AProc: TProc<TObject>); overload;
     procedure NewAttributeControl(const ATypeID, ASubTypeID: Int64;
-      ADoExecute: IPluginExecute);overload;
+      ADoExecute: IPluginExecute); overload;
     procedure NewEmbbedControl(AParentHandle: THandle; AControlID: Int64;
       AControlType: Int64 = 0); overload; virtual;
     procedure EmbbedControl(AControlID: Int64; AControlType: Int64;
@@ -172,7 +174,7 @@ type
 
     // operations
     procedure Open(AApp: IPluginApplication);
-    procedure Connection(const AConnectionString:String);
+    procedure Connection(const AConnectionString: String);
     procedure User(const AFilial: Integer; const AAppUser: string);
 
   published
@@ -207,19 +209,23 @@ procedure Register;
 
 implementation
 
-uses {$ifndef DLL} plugin.Service,  {$endif}
- IniFiles,{$ifdef USE_INIFILEEx} IniFilesEx,{$endif} System.uDebug, VCL.Menus.Helpers;
+uses {$IFNDEF DLL} plugin.Service, {$ENDIF}
+  IniFiles {$IFDEF USE_INIFILEEx}, IniFilesEx{$ENDIF},
+  WinAPI.GDIPObj;
 
 var
   LPluginManager: TPluginManager;
+
+
+
 
 procedure Register;
 begin
   RegisterComponents('Store', [TPluginManager]);
 end;
 
-procedure TPluginManager.NewAttributeControl(const ATypeID,
-  ASubTypeID: Int64; ADoExecute: IPluginExecute);
+procedure TPluginManager.NewAttributeControl(const ATypeID, ASubTypeID: Int64;
+  ADoExecute: IPluginExecute);
 var
   it: TPluginAttributeControl;
 begin
@@ -228,6 +234,50 @@ begin
   it.SubTypeID := ASubTypeID;
   it.PluginExecute := ADoExecute;
   FAttributeControls.Add(it);
+end;
+
+type
+  TMenuItemHelper = class helper for TMenuItem
+  public
+    function FindItem(const aName: string): TMenuItem;
+  end;
+
+function TMenuItemHelper.FindItem(const aName: string): TMenuItem;
+var
+  i: Integer;
+begin
+  result := nil;
+  if sametext(Name, aName) then
+  begin
+    result := self;
+    exit;
+  end
+  else
+    for i := 0 to Count - 1 do
+    begin
+      result := items[i].FindItem(aName);
+      if assigned(result) then
+        exit;
+    end;
+end;
+
+type
+  TMainMenuHelper = class helper for TMainMenu
+  public
+    function FindItem(const aName: string): TMenuItem;
+  end;
+
+function TMainMenuHelper.FindItem(const aName: string): TMenuItem;
+var
+  i: Integer;
+begin
+  result := nil;
+  for i := 0 to items.Count - 1 do
+  begin
+    result := items[i].FindItem(aName);
+    if assigned(result) then
+      exit;
+  end;
 end;
 
 var
@@ -276,17 +326,17 @@ function TPluginManagerIntf.Add(AHandle: THandle; AFilename: String;
 APlugins: IPluginItems): Integer;
 var
   p: TPluginInfo;
-  I: Integer;
+  i: Integer;
 begin
   result := -1;
   p := TPluginInfo.Create;
   p.Handle := AHandle;
-  p.Plugin := APlugins;
+  p.plugin := APlugins;
   p.Filename := AFilename;
-  for I := 0 to APlugins.Count - 1 do
+  for i := 0 to APlugins.Count - 1 do
   begin
-    APlugins.GetItem(I).GetInterface.Connection(FConnectionString);
-    APlugins.GetItem(I).GetInterface.User(FFilial, FAppUser);
+    APlugins.GetItem(i).GetInterface.Connection(FConnectionString);
+    APlugins.GetItem(i).GetInterface.User(FFilial, FAppUser);
   end;
   FList.Add(p);
   result := FList.Count - 1;
@@ -294,12 +344,13 @@ end;
 
 procedure TPluginManagerIntf.Connection(const AConnectionString: string);
 var
-  I, n: Integer;
+  i, n: Integer;
 begin
   FConnectionString := AConnectionString;
-  for I := 0 to FList.Count - 1 do
-    for n := 0 to FList.Items[I].Plugin.Count - 1 do
-      FList.Items[I].Plugin.GetItem(n).GetInterface.Connection(FConnectionString);
+  for i := 0 to FList.Count - 1 do
+    for n := 0 to FList.items[i].plugin.Count - 1 do
+      FList.items[i].plugin.GetItem(n).GetInterface.Connection
+        (FConnectionString);
 end;
 
 function TPluginManagerIntf.Count: Integer;
@@ -320,8 +371,11 @@ var
 begin
   while FList.Count > 0 do
   begin
-    p := FList.Items[FList.Count - 1];
-    p.Free;
+    try
+      p := FList.items[FList.Count - 1];
+      p.Free;
+    except
+    end;
     FList.Delete(FList.Count - 1);
   end;
   FList.Free;
@@ -330,12 +384,12 @@ end;
 
 function TPluginManagerIntf.Find(APlugin: string): TPluginInfo;
 var
-  I: Integer;
+  i: Integer;
 begin
   result := nil;
-  I := IndexOf(APlugin);
-  if I >= 0 then
-    result := FList.Items[I];
+  i := IndexOf(APlugin);
+  if i >= 0 then
+    result := FList.items[i];
 end;
 
 function TPluginManagerIntf.GetApplication: IPluginApplication;
@@ -345,14 +399,14 @@ end;
 
 function TPluginManagerIntf.GetItem(idx: Integer): IPluginItems;
 begin
-  result := FList.Items[idx].Plugin;
+  result := FList.items[idx].plugin;
 end;
 
 function TPluginManagerIntf.LoadPlugin(APlugin: string): Integer;
 var
   F: function(APApplication: IPluginApplication): IPluginItems;
   H: THandle;
-  I: Integer;
+  i: Integer;
   itens: IPluginItems;
 begin
   result := -1;
@@ -375,31 +429,32 @@ begin
 end;
 
 function TPluginManagerIntf.Open(AApplication: IPluginApplication): Integer;
-{$ifndef DLL}
-var n,i:integer;
-    it:IPluginItems;
+{$IFNDEF DLL}
+var
+  n, i: Integer;
+  it: IPluginItems;
 begin
-   it := GetPluginItems;
-   if assigned(it) then
-   with GetPluginItems do
-    for I := 0 to Count-1  do
-      GetItem(I).DoStart;
-{$else}
+  it := GetPluginItems;
+  if assigned(it) then
+    with GetPluginItems do
+      for i := 0 to Count - 1 do
+        GetItem(i).DoStart;
+{$ELSE}
 begin
-{$endif}
+{$ENDIF}
   result := LoadPlugins(ExtractFileName(ParamStr(0)), AApplication);
 end;
 
 function TPluginManagerIntf.LoadPlugins(AFilename: string;
 AApplication: IPluginApplication): Integer;
 var
-  I, n: Integer;
+  i, n: Integer;
   F: string;
   achei: boolean;
 begin
 
   if assigned(AApplication) then
-       SetApplication(AApplication);
+    SetApplication(AApplication);
   if AFilename = '' then
     AFilename := FFilename;
   if FFilename = '' then
@@ -415,8 +470,8 @@ begin
           if fileExists(F) then
           begin
             achei := false;
-            for I := 0 to FList.Count - 1 do
-              if sametext(F, FList.Items[I].Filename) then
+            for i := 0 to FList.Count - 1 do
+              if sametext(F, FList.items[i].Filename) then
               begin // check if repeat the same DLL
                 achei := true;
                 break;
@@ -429,7 +484,8 @@ begin
           end;
         except
           on e: Exception do
-            DebugLog('Erro LoadPlugins <' + F + '>: ' + e.message);
+            raise Exception.Create('Erro LoadPlugins <' + F + '>: ' +
+              e.message);
         end;
         inc(n);
       end;
@@ -440,38 +496,38 @@ end;
 
 function TPluginManagerIntf.IndexOf(APlugin: string): Integer;
 var
-  I: Integer;
+  i: Integer;
 begin
   result := -1;
-  for I := 0 to FList.Count - 1 do
-    if sametext(APlugin, FList.Items[I].Filename) then
+  for i := 0 to FList.Count - 1 do
+    if sametext(APlugin, FList.items[i].Filename) then
     begin
-      result := I;
+      result := i;
       exit;
     end;
 end;
 
 function TPluginManagerIntf.InstallPlugin(APlugin: string): Integer;
 var
-  I: Integer;
+  i: Integer;
   app: string;
   info: TPluginInfo;
 begin
   result := -1;
-  I := IndexOf(APlugin);
-  if I >= 0 then
+  i := IndexOf(APlugin);
+  if i >= 0 then
     exit;
 
   result := LoadPlugin(APlugin);
   if result >= 0 then
   begin
-    I := 0;
+    i := 0;
     app := ExtractFileName(ParamStr(0));
     with TIniFile.Create(FFilename) do
       try
-        while readString(app, 'Plugin' + intToStr(I), '') <> '' do
-          inc(I);
-        WriteString(app, 'Plugin' + intToStr(I), APlugin);
+        while readString(app, 'Plugin' + intToStr(i), '') <> '' do
+          inc(i);
+        WriteString(app, 'Plugin' + intToStr(i), APlugin);
       finally
         Free;
       end;
@@ -479,8 +535,8 @@ begin
     info := Find(APlugin);
     if assigned(info) then
     begin
-      info.Plugin.Connection(FConnectionString);
-      info.Plugin.Install;
+      info.plugin.Connection(FConnectionString);
+      info.plugin.Install;
     end;
 
   end;
@@ -489,8 +545,8 @@ end;
 procedure TPluginManagerIntf.SetApplication(const AApplication
   : IPluginApplication);
 begin
-  if AApplication<>PluginApplication then
-     PluginApplication := AApplication;
+  if AApplication <> PluginApplication then
+    PluginApplication := AApplication;
 end;
 
 procedure TPluginManagerIntf.SetFileName(AFilename: string);
@@ -504,19 +560,19 @@ var
 begin
   info := Find(APlugin);
   if assigned(info) then
-    info.Plugin.UnInstall;
+    info.plugin.UnInstall;
 end;
 
 procedure TPluginManagerIntf.User(const AFilial: Integer;
 const AAppUser: string);
 var
-  I, n: Integer;
+  i, n: Integer;
 begin
   FFilial := AFilial;
   FAppUser := AAppUser;
-  for I := 0 to FList.Count - 1 do
-    for n := 0 to FList.Items[I].Plugin.Count - 1 do
-      FList.Items[I].Plugin.GetItem(n).GetInterface.User(FFilial, FAppUser);
+  for i := 0 to FList.Count - 1 do
+    for n := 0 to FList.items[i].plugin.Count - 1 do
+      FList.items[i].plugin.GetItem(n).GetInterface.User(FFilial, FAppUser);
 
 end;
 
@@ -537,7 +593,8 @@ begin
       @p := GetProcAddress(Handle, 'UnloadPlugin');
       if assigned(p) then
         p;
-      Plugin := nil;
+      plugin := nil;
+      sleep(100);
       FreeLibrary(Handle);
     except
     end;
@@ -546,7 +603,7 @@ end;
 
 { TPluginMananer }
 
-procedure TPluginManager.Connection(const AConnectionString:string);
+procedure TPluginManager.Connection(const AConnectionString: string);
 begin
   Plugins.Connection(AConnectionString);
 end;
@@ -561,7 +618,7 @@ end;
 
 destructor TPluginManager.Destroy;
 var
-  I: Integer;
+  i: Integer;
 begin
   FAttributeControls.Free;
   FPlugins.Free;
@@ -571,11 +628,11 @@ end;
 procedure TPluginManager.EmbbedControl(AControlID, AControlType: Int64;
 AProc: TProc<IPluginExecute>);
 var
-  I: Integer;
+  i: Integer;
   intf: IPluginExecute;
 begin
-  for I := 0 to FAttributeControls.Count - 1 do
-    with FAttributeControls.Items[I] do
+  for i := 0 to FAttributeControls.Count - 1 do
+    with FAttributeControls.items[i] do
       if (TypeID = AControlID) and (SubTypeID = AControlType) then
       begin
         intf := PluginExecute;
@@ -592,13 +649,13 @@ end;
 procedure TPluginManager.NewEmbbedControl(AParentHandle: THandle;
 AControlID, AControlType: Int64);
 var
-  I: Integer;
+  i: Integer;
 begin
-  for I := 0 to FAttributeControls.Count - 1 do
-    with FAttributeControls.Items[I] do
+  for i := 0 to FAttributeControls.Count - 1 do
+    with FAttributeControls.items[i] do
       if (TypeID = AControlID) and (SubTypeID = AControlType) then
       begin
-        FAttributeControls.Items[I].PluginExecute.Embedded(AParentHandle);
+        FAttributeControls.items[i].PluginExecute.Embedded(AParentHandle);
       end;
 
 end;
@@ -613,16 +670,18 @@ begin
   Plugins.Open(AApp);
 end;
 
-procedure TPluginManager.Perform(ATypeID:Int64; AMsg: Cardinal; WParam, LParam: NativeUInt);
-var i,n:integer;
-    intf:IPluginInfo;
+procedure TPluginManager.Perform(ATypeID: Int64; AMsg: Cardinal;
+WParam, LParam: NativeUInt);
+var
+  i, n: Integer;
+  intf: IPluginInfo;
 begin
-   for I := 0 to Plugins.Count-1 do
-    for n := 0 to Plugins.GetItem(i).Count-1 do
+  for i := 0 to Plugins.Count - 1 do
+    for n := 0 to Plugins.GetItem(i).Count - 1 do
     begin
-       intf := Plugins.GetItem(I).GetItem(n);
-       if (ATypeID=0) or (ATypeID=intf.GetTypeID) then
-          intf.GetInterface.Perform(AMsg,WParam,LParam);
+      intf := Plugins.GetItem(i).GetItem(n);
+      if (ATypeID = 0) or (ATypeID = intf.GetTypeID) then
+        intf.GetInterface.Perform(AMsg, WParam, LParam);
     end;
 
 end;
@@ -684,8 +743,8 @@ end;
 
 { TPluginApplication }
 
-procedure TPluginManager.RegisterAttributeControl(const AType,
-  ASubType: Int64; ADoExecute: IPluginControl);
+procedure TPluginManager.RegisterAttributeControl(const AType, ASubType: Int64;
+ADoExecute: IPluginControl);
 begin
   if assigned(FonRegisterControl) then
     FonRegisterControl(AType, ASubType, ADoExecute);
@@ -706,14 +765,14 @@ begin
     FonRegisterToolbarItem(AParentItemName, ACaption, ADoExecute);
 end;
 
-procedure TPluginManager.SetonRegisterControl
-  (const Value: TPluginApplicationControlEvent);
+procedure TPluginManager.SetonRegisterControl(const Value
+  : TPluginApplicationControlEvent);
 begin
   FonRegisterControl := Value;
 end;
 
-procedure TPluginManager.SetonRegisterMenuItem
-  (const Value: TPluginApplicationMenuItemEvent);
+procedure TPluginManager.SetonRegisterMenuItem(const Value
+  : TPluginApplicationMenuItemEvent);
 begin
   FonRegisterMenuItem := Value;
 end;

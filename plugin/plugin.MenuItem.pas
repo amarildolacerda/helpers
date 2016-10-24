@@ -2,7 +2,8 @@ unit Plugin.MenuItem;
 
 interface
 
-uses System.classes, WinApi.Windows, System.SysUtils, VCL.Forms, VCL.Controls,
+uses System.classes, WinApi.Windows, System.SysUtils,
+ {$ifdef FMX} FMX.Forms, FMX.Controls,{$else} VCL.Forms, VCL.Controls,{$endif}
   Plugin.Service, Plugin.Forms,
   Plugin.Interf;
 

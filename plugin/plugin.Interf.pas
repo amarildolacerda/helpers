@@ -26,7 +26,7 @@ unit Plugin.Interf;
 
 interface
 
-uses VCL.Controls, mInterfaces;
+uses  {$ifdef FMX} FMX.Controls {$else}  VCL.Controls {$endif};
 
 type
 

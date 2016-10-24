@@ -12,6 +12,9 @@
         <Projects Include="PluginExecuteSimple.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="fmxPlugin.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -47,14 +50,23 @@
     <Target Name="PluginExecuteSimple:Make">
         <MSBuild Projects="PluginExecuteSimple.dproj" Targets="Make"/>
     </Target>
+    <Target Name="fmxPlugin">
+        <MSBuild Projects="fmxPlugin.dproj"/>
+    </Target>
+    <Target Name="fmxPlugin:Clean">
+        <MSBuild Projects="fmxPlugin.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="fmxPlugin:Make">
+        <MSBuild Projects="fmxPlugin.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="HostApplication;PluginMenuItemSimple;PluginExecuteSimple"/>
+        <CallTarget Targets="HostApplication;PluginMenuItemSimple;PluginExecuteSimple;fmxPlugin"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="HostApplication:Clean;PluginMenuItemSimple:Clean;PluginExecuteSimple:Clean"/>
+        <CallTarget Targets="HostApplication:Clean;PluginMenuItemSimple:Clean;PluginExecuteSimple:Clean;fmxPlugin:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="HostApplication:Make;PluginMenuItemSimple:Make;PluginExecuteSimple:Make"/>
+        <CallTarget Targets="HostApplication:Make;PluginMenuItemSimple:Make;PluginExecuteSimple:Make;fmxPlugin:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

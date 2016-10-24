@@ -26,7 +26,8 @@ unit Plugin.Forms;
 
 interface
 
-uses WinApi.windows, VCL.Forms, VCL.Controls, System.classes, System.SysUtils,
+uses WinApi.windows, {$IFDEF FMX} FMX.Forms, FMX.Controls, {$ELSE} VCL.Forms,
+  VCL.Controls, {$ENDIF} System.classes, System.SysUtils,
   Plugin.Service, Plugin.Interf;
 
 type
@@ -64,6 +65,11 @@ type
   public
     property SubTypeID: Int64 read GetSubTypeID write SetSubTypeID;
   end;
+
+{$IFDEF FMX}
+
+  TFormClass = class of TForm;
+{$ENDIF}
 
   TPluginFormService = class(TPluginExecuteService)
   protected
@@ -109,7 +115,11 @@ begin
   if not assigned(FForm) then
     exit;
   if AModal then
-    FForm.ShowModal
+    try
+      FForm.ShowModal
+    finally
+      FForm.Release
+    end
   else
     FForm.Show;
 end;
@@ -137,7 +147,10 @@ begin
   result := FForm;
   if AParent > 0 then
   begin
+{$IFDEF FMX}
+{$ELSE}
     WinApi.windows.SetParent(FForm.Handle, AParent);
+{$ENDIF}
   end;
 end;
 

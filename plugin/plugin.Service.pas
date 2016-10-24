@@ -35,8 +35,11 @@ unit Plugin.Service;
 
 interface
 
-uses WinApi.Windows, VCL.Forms, VCL.Controls, Plugin.Interf,
-     System.Generics.collections;
+uses WinApi.Windows, System.SysUtils,
+{$IFDEF FMX} FMX.Forms, FMX.Controls, System.UITypes, {$ELSE} VCL.Forms,
+  VCL.Controls, {$ENDIF}
+  Plugin.Interf,
+  System.Generics.collections;
 
 Type
   // List of plugins
@@ -60,6 +63,7 @@ Type
   TPluginService = class(TInterfacedObject, IPluginInfo)
   private
     FTypeID: Int64;
+    FParentHandle: THandle;
   protected
     FForm: TForm;
     FOwned: boolean;
@@ -91,13 +95,16 @@ procedure UnloadPlugin;
 
 function GetPluginItems: IPluginItems;
 
+var
+  PluginExitProc: TProc;
+  PluginEnterProc: TProc;
+
 implementation
 
-uses System.Classes, System.SysUtils;
+uses System.Classes, WinAPI.GDIPObj, WinAPI.GDIPApi;
 
 var
-  LPlugin: IPluginItems; // TPluginItemsInterfaced;
-  // PluginService: IPluginInfo;
+  LPlugin: IPluginItems; 
   LPluginClass: TPluginItemsInterfacedClass;
 
 procedure RegisterPluginClass(AClass: TPluginItemsInterfacedClass);
@@ -140,9 +147,23 @@ begin
 end;
 
 procedure TPluginService.Perform(AMsg: Cardinal; WParam, LParam: NativeUInt);
+var
+  WindRect: TRect;
 begin
   if assigned(FForm) then
-    FForm.Perform(AMsg, WParam, LParam)
+  begin
+    if AMsg = SW_MAXIMIZE then
+    begin
+      GetWindowRect(FParentHandle, WindRect);
+      FForm.Height := WindRect.Height;
+      FForm.Width := WindRect.Width;
+    end
+    else
+{$IFDEF FMX}
+{$ELSE}
+      FForm.Perform(AMsg, WParam, LParam);
+{$ENDIF}
+  end;
 end;
 
 procedure TPluginService.SetTypeID(const Value: Int64);
@@ -178,14 +199,20 @@ procedure TPluginService.Embedded(const AParent: THandle);
 begin
   if not assigned(FForm) then
     exit;
-
-  WinApi.Windows.SetParent(FForm.Handle, AParent);
-  FForm.BorderStyle := bsNone;
+  FParentHandle := AParent;
   FForm.Left := 0;
   FForm.Top := 0;
+  FForm.BorderIcons := [];
+{$IFDEF FMX}
+  FForm.WindowState := TWindowState.wsMaximized;
+  FForm.Show;
+{$ELSE}
+  WinApi.Windows.SetParent(FForm.Handle, AParent);
+  FForm.BorderStyle := bsNone;
   FForm.Align := alClient;
   FForm.Show;
   ShowWindowAsync(FForm.Handle, SW_MAXIMIZE);
+{$ENDIF}
 
 end;
 
@@ -197,13 +224,20 @@ begin
   result := LPlugin;
   for i := 0 to result.Count - 1 do
     result.GetItem(i).DoStart;
+  if assigned(PluginEnterProc) then
+    PluginEnterProc;
+
 end;
 
 procedure UnloadPlugin;
+var i:integer;
 begin
 {$IFDEF DLL}
 {$ELSE}
 {$ENDIF}
+  if assigned(PluginExitProc) then
+    PluginExitProc;
+  Application.ProcessMessages;
 end;
 
 procedure RegisterPlugin(AInfo: IPluginInfo);
@@ -277,7 +311,7 @@ RegisterPluginClass(TPluginItemsInterfaced);
 finalization
 
 {$IFDEF DLL}
-// LPlugin := nil;
+  // LPlugin := nil;
 {$ENDIF}
 
 end.
