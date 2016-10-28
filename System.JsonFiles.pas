@@ -27,6 +27,7 @@ unit System.JsonFiles;
 interface
 
 uses System.Classes, System.SysUtils, System.Rtti, System.Json, {Rest.Json,}
+  System.IOUtils,
   System.TypInfo;
 
 type
@@ -44,9 +45,9 @@ type
     procedure WriteValue(const Section, Ident: string; Value: TValue); virtual;
     function ReadValue(const Section, Ident: string; Default: Variant)
       : Variant; virtual;
-    procedure LoadValues; virtual;
   public
 
+    procedure LoadValues; virtual;
     constructor Create(AFilename: string); overload; virtual;
     constructor Create(const AFilename: string; const AEncoding: TEncoding);
       overload; virtual;
@@ -98,9 +99,9 @@ type
   end;
 
   TJsonFile = class(TMemJsonFile)
-  protected
-    procedure UpdateFile;override;
-    procedure LoadValues;override;
+  public
+    procedure UpdateFile; override;
+    procedure LoadValues; override;
   end;
 
 implementation
@@ -181,9 +182,13 @@ begin
   FAutoSave := true;
   FJson := TJsonObject.Create;
   FEncoding := AEncoding;
+{$IFNDEF MSWINDOWS)}
+  if extractFileName(AFileName)=AFileName then
+     FFileName := TPath.Combine( TPath.GetHomePath, AFileName );
+{$ELSE}
   FFileName := AFilename;
+{$ENDIF}
   LoadValues;
-
 end;
 
 procedure TMemJsonFile.DeleteKey(const Section, Ident: String);
@@ -465,8 +470,7 @@ begin
   end;
 end;
 
-function TMemJsonFile.ReadString(const Section, Ident,
-  Default: string): string;
+function TMemJsonFile.ReadString(const Section, Ident, Default: string): string;
 var
   v: Variant;
 begin
@@ -495,7 +499,7 @@ end;
 
 procedure TMemJsonFile.WriteBool(const Section, Ident: string; Value: boolean);
 begin
-  WriteValue(Section, Ident, value);
+  WriteValue(Section, Ident, Value);
 end;
 
 procedure TMemJsonFile.WriteDateTime(const Section, Ident: string;
@@ -506,7 +510,7 @@ end;
 
 procedure TMemJsonFile.WriteFloat(const Section, Ident: string; Value: double);
 begin
-  WriteValue(Section, Ident, value);
+  WriteValue(Section, Ident, Value);
 end;
 
 procedure TMemJsonFile.WriteInteger(const Section, Ident: string;
@@ -515,8 +519,7 @@ begin
   WriteValue(Section, Ident, Value);
 end;
 
-procedure TMemJsonFile.WriteString(const Section, Ident: string;
-  Value: string);
+procedure TMemJsonFile.WriteString(const Section, Ident: string; Value: string);
 begin
   WriteValue(Section, Ident, Value);
 end;

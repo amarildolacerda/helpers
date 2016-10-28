@@ -35,7 +35,7 @@ type
     procedure UnLock;
   End;
 
-  TObjectLock = class(TInterfacedObject,IObjectLock)
+  TObjectLock = class(TInterfacedObject, IObjectLock)
   private
     FLock: TObject;
   protected
@@ -107,6 +107,10 @@ type
     constructor create; overload; override;
     constructor create(AClass: TClass); overload; virtual;
     destructor destroy; override;
+    procedure Push(AValue: T);
+    procedure Pop;
+    function Peek: T;
+    function Extract: T;
     function LockList: TObjectList<T>;
     procedure UnlockList;
     procedure Clear;
@@ -535,6 +539,13 @@ begin
   inherited;
 end;
 
+function TThreadSafeObjectList<T>.Extract: T;
+begin
+  result := nil;
+  if Count > 0 then
+    result := Items[Count - 1];
+end;
+
 function TThreadSafeObjectList<T>.Getitems(AIndex: integer): T;
 begin
   with LockList do
@@ -559,6 +570,36 @@ function TThreadSafeObjectList<T>.LockList: TObjectList<T>;
 begin
   Lock;
   result := FList;
+end;
+
+function TThreadSafeObjectList<T>.Peek: T;
+begin
+  result := nil;
+  if Count > 0 then
+    result := Items[Count - 1];
+end;
+
+procedure TThreadSafeObjectList<T>.Pop;
+var
+  o: TObject;
+begin
+  if Count > 0 then
+  begin
+    with LockList do
+    try
+    o := Items[Count - 1];
+    Delete(Count - 1);
+    if (not FList.OwnsObjects) and assigned(o) then
+      o.DisposeOf;
+    finally
+      UnlockList;
+    end;
+  end;
+end;
+
+procedure TThreadSafeObjectList<T>.Push(AValue: T);
+begin
+  Add(AValue);
 end;
 
 procedure TThreadSafeObjectList<T>.Remove(AValue: T);
