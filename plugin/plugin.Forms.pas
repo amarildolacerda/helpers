@@ -85,9 +85,18 @@ type
     procedure DoStart; override;
   end;
 
+
+procedure Register;
+
 implementation
 
 uses System.classes.Helper, System.Rtti;
+
+
+procedure Register;
+begin
+  // RegisterComponents('Store',[TPluginFormService]);
+end;
 
 procedure TPluginExecuteService.Connection(const AConnectionString: string);
 begin

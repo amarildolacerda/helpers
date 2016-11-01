@@ -35,7 +35,7 @@ unit Plugin.Service;
 
 interface
 
-uses WinApi.Windows, System.SysUtils,
+uses WinApi.Windows, System.Classes, System.SysUtils,
 {$IFDEF FMX} FMX.Forms, FMX.Controls, System.UITypes, {$ELSE} VCL.Forms,
   VCL.Controls, {$ENDIF}
   Plugin.Interf,
@@ -60,7 +60,7 @@ Type
   end;
 
   // plugin base
-  TPluginService = class(TInterfacedObject, IPluginInfo)
+  TPluginService = class(TComponent, IPluginInfo)
   private
     FTypeID: Int64;
     FParentHandle: THandle;
@@ -80,8 +80,10 @@ Type
     function PluginName: string; virtual;
     procedure Embedded(const AParent: THandle); virtual;
     function CanClose: boolean; virtual;
+  published
     property TypeID: Int64 read GetTypeID write SetTypeID;
   end;
+
 
   // register one plugin to list of plugins
 procedure RegisterPlugin(AInfo: IPluginInfo);
@@ -95,17 +97,23 @@ procedure UnloadPlugin;
 
 function GetPluginItems: IPluginItems;
 
+procedure Register;
+
 var
   PluginExitProc: TProc;
   PluginEnterProc: TProc;
 
 implementation
 
-uses System.Classes, WinAPI.GDIPObj, WinAPI.GDIPApi;
-
 var
   LPlugin: IPluginItems; 
   LPluginClass: TPluginItemsInterfacedClass;
+
+procedure Register;
+begin
+  RegisterComponents('Store', [TPluginService]);
+end;
+
 
 procedure RegisterPluginClass(AClass: TPluginItemsInterfacedClass);
 begin
@@ -143,7 +151,9 @@ end;
 function TPluginService.PluginName: string;
 begin
   if assigned(FForm) then
-    result := FForm.Caption;
+    result := FForm.Caption
+  else
+    result := self.Name;
 end;
 
 procedure TPluginService.Perform(AMsg: Cardinal; WParam, LParam: NativeUInt);
@@ -191,7 +201,7 @@ end;
 
 constructor TPluginService.Create;
 begin
-  inherited;
+  inherited create(nil);
   // PluginService := self;
 end;
 

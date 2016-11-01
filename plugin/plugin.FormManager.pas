@@ -71,8 +71,8 @@ implementation
 
 {$R *.dfm}
 
-uses IniFiles,{$ifdef USE_INIFILEEx} IniFilesEx, {$endif} System.Classes.Helper, Vcl.Dialogs.Helper,
-   plugin.Manager;
+uses IniFiles, {$IFDEF USE_INIFILEEx} IniFilesEx, {$ENDIF}
+  plugin.Manager;
 
 var
   FFormDlg: TPluginFormManagerDlg;
@@ -85,18 +85,25 @@ begin
 end;
 
 procedure TPluginFormManagerDlg.Button1Click(Sender: TObject);
-var appDir:string;
+var
+  appDir: string;
+  dlg: TOpenDialog;
 begin
   appDir := GetCurrentDir;
-  TOpenDialogIntf.new.InitialDir(appDir)
-    .Filter(' DLL de Plugin (*.dll)|*.dll').Execute(
-    procedure(arquivo: string)
+  dlg := TOpenDialog.Create(self);
+  try
+    dlg.InitialDir := appDir;
+    dlg.Filter := ' DLL de Plugin (*.dll)|*.dll';
+    if dlg.execute then
     begin
-      if GetPluginManager.InstallPlugin(arquivo) >= 0 then
+      if GetPluginManager.InstallPlugin(dlg.Filename) >= 0 then
       begin
         CarregarLista;
       end;
-    end);
+    end;
+  finally
+    dlg.Free;
+  end;
 end;
 
 procedure TPluginFormManagerDlg.FormCreate(Sender: TObject);
@@ -144,7 +151,7 @@ begin
         FDMemTable1.next;
       end;
     finally
-      free;
+      Free;
     end;
   CarregarLista;
 end;
@@ -195,11 +202,11 @@ begin
           end;
         end;
       finally
-        free;
+        Free;
       end;
     Reordena;
   finally
-    str.free;
+    str.Free;
   end;
 end;
 
