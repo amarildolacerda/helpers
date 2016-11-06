@@ -1,0 +1,96 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{5B32DD23-9B6B-41DA-99AA-2B993D06A74C}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="HostApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="PluginMenuItemSimple.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="PluginExecuteSimple.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="fmxPlugin.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Host_PluginManagerCmp.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\WBAPlugins.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="HostApplication">
+        <MSBuild Projects="HostApplication.dproj"/>
+    </Target>
+    <Target Name="HostApplication:Clean">
+        <MSBuild Projects="HostApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HostApplication:Make">
+        <MSBuild Projects="HostApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="PluginMenuItemSimple">
+        <MSBuild Projects="PluginMenuItemSimple.dproj"/>
+    </Target>
+    <Target Name="PluginMenuItemSimple:Clean">
+        <MSBuild Projects="PluginMenuItemSimple.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="PluginMenuItemSimple:Make">
+        <MSBuild Projects="PluginMenuItemSimple.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="PluginExecuteSimple">
+        <MSBuild Projects="PluginExecuteSimple.dproj"/>
+    </Target>
+    <Target Name="PluginExecuteSimple:Clean">
+        <MSBuild Projects="PluginExecuteSimple.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="PluginExecuteSimple:Make">
+        <MSBuild Projects="PluginExecuteSimple.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="fmxPlugin">
+        <MSBuild Projects="fmxPlugin.dproj"/>
+    </Target>
+    <Target Name="fmxPlugin:Clean">
+        <MSBuild Projects="fmxPlugin.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="fmxPlugin:Make">
+        <MSBuild Projects="fmxPlugin.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Host_PluginManagerCmp">
+        <MSBuild Projects="Host_PluginManagerCmp.dproj"/>
+    </Target>
+    <Target Name="Host_PluginManagerCmp:Clean">
+        <MSBuild Projects="Host_PluginManagerCmp.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Host_PluginManagerCmp:Make">
+        <MSBuild Projects="Host_PluginManagerCmp.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WBAPlugins">
+        <MSBuild Projects="..\WBAPlugins.dproj"/>
+    </Target>
+    <Target Name="WBAPlugins:Clean">
+        <MSBuild Projects="..\WBAPlugins.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WBAPlugins:Make">
+        <MSBuild Projects="..\WBAPlugins.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="HostApplication;PluginMenuItemSimple;PluginExecuteSimple;fmxPlugin;Host_PluginManagerCmp;WBAPlugins"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="HostApplication:Clean;PluginMenuItemSimple:Clean;PluginExecuteSimple:Clean;fmxPlugin:Clean;Host_PluginManagerCmp:Clean;WBAPlugins:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="HostApplication:Make;PluginMenuItemSimple:Make;PluginExecuteSimple:Make;fmxPlugin:Make;Host_PluginManagerCmp:Make;WBAPlugins:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
