@@ -24,19 +24,16 @@ package WBAPlugins;
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
 {$DEFINE DEBUG}
+{$DEFINE BPL}
 {$ENDIF IMPLICITBUILDING}
 {$IMPLICITBUILD ON}
 
 requires
   rtl,
-  vcl;
+  vcl,
+  dbrtl;
 
 contains
-  plugin.Manager in 'plugin.Manager.pas',
-  plugin.Service in 'plugin.Service.pas',
-  plugin.Control in 'plugin.Control.pas',
-  plugin.Forms in 'plugin.Forms.pas',
-  plugin.MenuItem in 'plugin.MenuItem.pas',
-  plugin.ToolBar in 'plugin.ToolBar.pas';
+  plugin.Manager in 'plugin.Manager.pas';
 
 end.

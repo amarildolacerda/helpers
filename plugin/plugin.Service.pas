@@ -35,7 +35,7 @@ unit Plugin.Service;
 
 interface
 
-uses WinApi.Windows, System.Classes, System.SysUtils,
+uses WinApi.Windows, System.Classes, System.SysUtils, WinApi.Messages,
 {$IFDEF FMX} FMX.Forms, FMX.Controls, System.UITypes, {$ELSE} VCL.Forms,
   VCL.Controls, {$ENDIF}
   Plugin.Interf,
@@ -47,7 +47,7 @@ Type
 
   TPluginItemsInterfaced = class(TInterfacedObject, IPluginItems)
   protected
-    FItems: TList<IPluginInfo>;
+    FItems: TInterfaceList; // <IPluginInfo>;
   public
     constructor Create;
     destructor Destroy; override;
@@ -70,20 +70,34 @@ Type
     function GetTypeID: Int64; virtual;
     procedure SetTypeID(const Value: Int64); virtual;
     procedure Perform(AMsg: Cardinal; WParam: NativeUInt; LParam: NativeUInt);
-
+    procedure SetPosition(ATop, ALeft, AWidth, AHeight: integer); virtual;
+    procedure InitEmbedded;
   public
+    function GetVersion: integer;
+
     constructor Create; overload;
     destructor Destroy; override;
     function GetAuthor: string; virtual;
     procedure DoStart; virtual;
     function GetInterface: IPluginExecuteBase; virtual;
     function PluginName: string; virtual;
-    procedure Embedded(const AParent: THandle); virtual;
+    procedure Embedded(const AParent: THandle); overload; virtual;
     function CanClose: boolean; virtual;
+{$IFDEF FMX}
+{$ELSE}
+    function GetControl: TControl; virtual;
+{$ENDIF}
+{$IFNDEF DLL}
+{$IFDEF FMX}
+{$ELSE}
+    function EmbeddedControl(const FParent: TWinControl): boolean;
+      overload; virtual;
+{$ENDIF}
+{$ENDIF}
+    class function OwnedComponents: TComponent;
   published
     property TypeID: Int64 read GetTypeID write SetTypeID;
   end;
-
 
   // register one plugin to list of plugins
 procedure RegisterPlugin(AInfo: IPluginInfo);
@@ -97,8 +111,6 @@ procedure UnloadPlugin;
 
 function GetPluginItems: IPluginItems;
 
-procedure Register;
-
 var
   PluginExitProc: TProc;
   PluginEnterProc: TProc;
@@ -106,14 +118,9 @@ var
 implementation
 
 var
-  LPlugin: IPluginItems; 
+  LPlugin: IPluginItems;
   LPluginClass: TPluginItemsInterfacedClass;
-
-procedure Register;
-begin
-  RegisterComponents('Store', [TPluginService]);
-end;
-
+  FOwnedComponents: TComponent;
 
 procedure RegisterPluginClass(AClass: TPluginItemsInterfacedClass);
 begin
@@ -130,6 +137,18 @@ function TPluginService.GetAuthor: string;
 begin
   result := 'storeware';
 end;
+
+{$IFDEF FMX}
+{$ELSE}
+
+function TPluginService.GetControl: TControl;
+begin
+  result := nil;
+{$IFNDEF DLL}
+  result := FForm;
+{$ENDIF}
+end;
+{$ENDIF}
 
 function TPluginService.GetInterface: IPluginExecuteBase;
 begin
@@ -148,6 +167,26 @@ begin
 
 end;
 
+{$IFDEF FMX}
+{$ELSE}
+{$IFNDEF DLL}
+
+function TPluginService.EmbeddedControl(const FParent: TWinControl): boolean;
+begin
+  result := false;
+{$IFNDEF DLL}
+  InitEmbedded;
+  if assigned(FForm) then
+  begin
+    FForm.parent := FParent;
+    FForm.show;
+    result := true;
+  end;
+{$ENDIF}
+end;
+{$ENDIF}
+{$ENDIF}
+
 function TPluginService.PluginName: string;
 begin
   if assigned(FForm) then
@@ -162,17 +201,29 @@ var
 begin
   if assigned(FForm) then
   begin
-    if AMsg = SW_MAXIMIZE then
-    begin
-      GetWindowRect(FParentHandle, WindRect);
-      FForm.Height := WindRect.Height;
-      FForm.Width := WindRect.Width;
-    end
-    else
 {$IFDEF FMX}
 {$ELSE}
-      FForm.Perform(AMsg, WParam, LParam);
+    FForm.Perform(AMsg, WParam, LParam);
 {$ENDIF}
+  end;
+end;
+
+procedure TPluginService.SetPosition(ATop, ALeft, AWidth, AHeight: integer);
+begin
+  if assigned(FForm) then
+  begin
+    FForm.Left := ALeft;
+    FForm.Top := ATop;
+{$IFDEF FMX}
+{$ELSE}
+    FForm.Align := alClient;
+    FForm.AlignWithMargins := true;
+    FForm.Constraints.MaxHeight := AHeight - (ALeft);
+    FForm.Constraints.MinHeight := AHeight - (ALeft);
+    FForm.Constraints.MaxWidth := AWidth - (ATop);
+    FForm.Constraints.MinWidth := AWidth - (ATop);
+{$ENDIF}
+    FForm.Invalidate;
   end;
 end;
 
@@ -184,6 +235,34 @@ end;
 function TPluginService.GetTypeID: Int64;
 begin
   result := FTypeID;
+end;
+
+function TPluginService.GetVersion: integer;
+begin
+  result := constPluginInterfaceVersion;
+end;
+
+procedure TPluginService.InitEmbedded;
+begin
+
+  if not assigned(FForm) then
+    exit;
+
+  // ShowWindowAsync(FForm.Handle, SW_MAXIMIZE);
+  FForm.Left := 0;
+  FForm.Top := 0;
+  FForm.BorderIcons := [];
+{$IFDEF FMX}
+  FForm.WindowState := TWindowState.wsMaximized;
+{$ELSE}
+  FForm.BorderStyle := bsNone;
+  FForm.Align := alClient;
+{$ENDIF}
+end;
+
+class function TPluginService.OwnedComponents: TComponent;
+begin
+  result := FOwnedComponents;
 end;
 
 function TPluginService.CanClose: boolean;
@@ -201,29 +280,19 @@ end;
 
 constructor TPluginService.Create;
 begin
-  inherited create(nil);
+  inherited Create(nil);
   // PluginService := self;
 end;
 
 procedure TPluginService.Embedded(const AParent: THandle);
 begin
-  if not assigned(FForm) then
-    exit;
   FParentHandle := AParent;
-  FForm.Left := 0;
-  FForm.Top := 0;
-  FForm.BorderIcons := [];
-{$IFDEF FMX}
-  FForm.WindowState := TWindowState.wsMaximized;
-  FForm.Show;
-{$ELSE}
-  WinApi.Windows.SetParent(FForm.Handle, AParent);
-  FForm.BorderStyle := bsNone;
-  FForm.Align := alClient;
-  FForm.Show;
-  ShowWindowAsync(FForm.Handle, SW_MAXIMIZE);
-{$ENDIF}
-
+  InitEmbedded;
+  if assigned(FForm) then
+  begin
+    WinApi.Windows.SetParent(HWND(FForm.Handle), AParent);
+    FForm.show;
+  end;
 end;
 
 function LoadPlugin(AAplication: IPluginApplication): IPluginItems;
@@ -240,9 +309,11 @@ begin
 end;
 
 procedure UnloadPlugin;
-var i:integer;
+var
+  i: integer;
 begin
 {$IFDEF DLL}
+  PluginApplication := nil;
 {$ELSE}
 {$ENDIF}
   if assigned(PluginExitProc) then
@@ -277,17 +348,21 @@ end;
 constructor TPluginItemsInterfaced.Create;
 begin
   inherited;
-  FItems := TList<IPluginInfo>.Create;
+  FItems := { TList<IPluginInfo> } TInterfaceList.Create;
 end;
 
 destructor TPluginItemsInterfaced.Destroy;
 var
   i: IPluginInfo;
+  x: IInterface;
+  ob: TObject;
 begin
   while FItems.Count > 0 do
   begin
     try
-      i := FItems.Items[0];
+      i := FItems.Items[0] as IPluginInfo;
+      // x := i.GetInterface;
+      // x := nil;
       i := nil;
       FItems.delete(0);
     except
@@ -299,7 +374,7 @@ end;
 
 function TPluginItemsInterfaced.GetItem(idx: integer): IPluginInfo;
 begin
-  result := FItems.Items[idx];
+  result := FItems.Items[idx] as IPluginInfo;
 end;
 
 procedure TPluginItemsInterfaced.Install;
@@ -317,11 +392,13 @@ exports LoadPlugin, UnloadPlugin;
 initialization
 
 RegisterPluginClass(TPluginItemsInterfaced);
+FOwnedComponents := TComponent.Create(nil);
 
 finalization
 
 {$IFDEF DLL}
-  // LPlugin := nil;
+// LPlugin := nil;
 {$ENDIF}
+  FOwnedComponents.DisposeOf;
 
 end.

@@ -11,6 +11,7 @@ library PluginMenuItemSimple;
   using PChar or ShortString parameters. }
 
 uses
+  ShareMem,
   System.SysUtils,
   System.Classes,
   uMenuItemSimple in 'uMenuItemSimple.pas' {Form1},

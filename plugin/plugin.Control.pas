@@ -2,7 +2,7 @@ unit plugin.Control;
 
 interface
 
-uses {$ifdef FMX} FMX.Forms,{$else} VCL.Forms,{$endif} plugin.Interf, plugin.Forms;
+uses {$ifdef FMX} FMX.Forms,{$else} VCL.Forms,{$endif}plugin.Service, plugin.Interf, plugin.Forms;
 
 type
 

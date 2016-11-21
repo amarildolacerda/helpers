@@ -39,8 +39,9 @@ interface
 
 uses
 
-  Windows, System.Classes, System.SysUtils, plugin.Interf, WinAPI.GDIPObj,
-{$IFDEF FMX} FXM.Menus, {$ELSE} VCL.Menus, {$ENDIF} System.Generics.Collections,
+  Windows, System.Classes, System.SysUtils, plugin.Interf,
+{$IFDEF FMX} FMX.Menus, {$ELSE} WinAPI.GDIPObj, VCL.Menus, {$ENDIF}
+  System.Generics.Collections,
   System.IOUtils;
 
 type
@@ -100,6 +101,7 @@ type
     procedure Connection(const AConnectionString: string);
     procedure User(const AFilial: Integer; const AAppUser: string);
     function Open(AApplication: IPluginApplication): Integer; overload;
+    procedure Sync(const AJson: string);
 
     property Filename: string read FFilename write SetFileName;
     function InstallPlugin(APlugin: string): Integer;
@@ -165,16 +167,18 @@ type
     destructor Destroy; override;
     procedure Perform(ATypeID: Int64; AMsg: Cardinal; WParam: NativeUInt;
       LParam: NativeUInt);
-
+    procedure SendCommand(ACommand: string; ABody: string);
+    function CreateCommand(ACommand: string; ABody: string): string;
     // default create item
     procedure NewMenuItem(AMainMenu: TMainMenu; ADefaultMenu: TMenuItem;
       const APath, ACaption: string; ADoExecute: IPluginMenuItem;
       AProc: TProc<TObject>); overload;
     procedure NewAttributeControl(const ATypeID, ASubTypeID: Int64;
       ADoExecute: IPluginExecute); overload;
-    procedure NewEmbbedControl(AParentHandle: THandle; AControlID: Int64;
+
+    procedure EmbedControl(AParentHandle: THandle; AControlID: Int64;
       AControlType: Int64 = 0); overload; virtual;
-    procedure EmbbedControl(AControlID: Int64; AControlType: Int64;
+    procedure EmbedControl(AControlID: Int64; AControlType: Int64;
       AProc: TProc<IPluginExecute>); overload; virtual;
 
     // jobs
@@ -182,6 +186,7 @@ type
     function LoadPlugins(APlugin: string): Integer; virtual;
     function InstallPlugin(APlugin: string): Integer; virtual;
     procedure UnInstallPlugin(APlugin: string); virtual;
+    procedure OpenDialog(AIniFile: string);
 
     // list os plugins
     property Plugins: TPluginManagerIntf read FPlugins;
@@ -193,9 +198,11 @@ type
     procedure Open(AApp: IPluginApplication);
     procedure Connection(const AConnectionString: String);
     procedure User(const AFilial: Integer; const AAppUser: string);
+    procedure Sync(const AJson: string);
 
   published
     // events fire when plugin start
+
     property onRegisterMenuItem: TPluginApplicationMenuItemEvent
       read FonRegisterMenuItem write SetonRegisterMenuItem;
     property onRegisterToolbarItem: TPluginApplicationToolbarItemEvent
@@ -231,7 +238,10 @@ procedure Register;
 
 implementation
 
-uses plugin.Common, {$IFNDEF DLL} plugin.Service, {$ENDIF}
+uses
+  plugin.Common,
+{$IFNDEF DLL} plugin.Service, {$ENDIF}
+{$IFNDEF BPL}plugin.FormManager, {$ENDIF}
   IniFiles {$IFDEF USE_INIFILEEx}, IniFilesEx{$ENDIF};
 
 var
@@ -253,6 +263,9 @@ begin
   it.PluginExecute := ADoExecute;
   FAttributeControls.Add(it);
 end;
+
+{$IFDEF FMX}
+{$ELSE}
 
 type
   TMenuItemHelper = class helper for TMenuItem
@@ -298,6 +311,8 @@ begin
   end;
 end;
 
+{$ENDIF}
+
 var
   itCount: Integer = 0;
 
@@ -309,8 +324,12 @@ var
   itClient: TMenuItem;
 begin
   inc(itCount);
+  itClient := nil;
+{$IFDEF FMX}
+{$ELSE}
   // procura o menu para mostrar
   itClient := AMainMenu.FindItem(APath);
+{$ENDIF}
   if itClient = nil then
     itClient := ADefaultMenu; // se nao encontrou pega um padrao
 
@@ -325,7 +344,8 @@ begin
           AContinue := true;
           if assigned(FonBeforeExecute) then
             FonBeforeExecute(PluginMenuItem, AContinue);
-          PluginMenuItem.DoClick(0);
+          if AContinue then
+            PluginMenuItem.DoClick(0);
         end;
       end);
 
@@ -334,9 +354,13 @@ begin
   it.Name := 'mnPlugin_' + formatDatetime
     ('hhmmsszzz_' + intToStr(itCount), now);
   it.PluginMenuItem := ADoExecute;
+{$IFDEF FMX}
+  it.text := (it.PluginMenuItem as IPluginMenuItem).GetCaption;
+{$ELSE}
   it.Caption := (it.PluginMenuItem as IPluginMenuItem).GetCaption;
-  // adiciona o menu na lista
   itClient.Add(it);
+{$ENDIF}
+  // adiciona o menu na lista
 
 end;
 
@@ -353,14 +377,16 @@ begin
   end;
 end;
 
-var LPluginMangerLocal:boolean=false;
+var
+  LPluginMangerLocal: boolean = false;
+
 function GetPluginManager: TPluginManager;
 begin
- if not assigned(LPluginManager) then
- begin
+  if not assigned(LPluginManager) then
+  begin
     LPluginManager := TPluginManager.Create(nil);
     LPluginMangerLocal := true;
- end;
+  end;
   result := LPluginManager;
 end;
 
@@ -454,7 +480,7 @@ var
   itens: IPluginItems;
 begin
   result := -1;
-  H := LoadLibrary(PWideChar(ExpandConstant( APlugin )));
+  H := LoadLibrary(PWideChar(ExpandConstant(APlugin)));
   if H > 0 then
   begin
     try
@@ -467,7 +493,8 @@ begin
       else
         raise Exception.Create('Não carregou o plugin');
     except
-      FreeLibrary(H);
+      // FreeLibrary(H);[
+      raise;
     end;
   end;
 end;
@@ -477,9 +504,9 @@ var
   LFileMask: string;
   LSearchRec: TSearchRec;
 begin
-  aPath := ExpandConstant(APath);
+  APath := ExpandConstant(APath);
   LFileMask := TPath.Combine(APath, '*.dll');
-  ForceDirectories( ExtractFileDir(LFileMask) );
+  ForceDirectories(ExtractFileDir(LFileMask));
   if FindFirst(LFileMask, faAnyFile, LSearchRec) = 0 then
     try
       repeat
@@ -500,8 +527,11 @@ begin
   if assigned(it) then
     with GetPluginItems do
       for i := 0 to Count - 1 do
+      begin
         GetItem(i).DoStart;
+      end;
 {$ELSE}
+
 begin
 {$ENDIF}
   result := LoadPlugins(ExtractFileName(ParamStr(0)), AApplication);
@@ -616,6 +646,31 @@ begin
   FFilename := AFilename;
 end;
 
+procedure TPluginManagerIntf.Sync(const AJson: string);
+  procedure process(AExecute: IPluginExecuteBase; ACommand: string);
+  begin
+    TThread.CreateAnonymousThread(
+      procedure
+      begin
+        TThread.Queue(nil,
+          procedure
+          begin
+            try
+              AExecute.Sync(ACommand);
+            except
+            end;
+          end);
+      end).start;
+  end;
+
+var
+  i, n: Integer;
+begin
+  for i := 0 to FList.Count - 1 do
+    for n := 0 to FList.items[i].plugin.Count - 1 do
+      process(FList.items[i].plugin.GetItem(n).GetInterface, AJson);
+end;
+
 procedure TPluginManagerIntf.UnInstallPlugin(APlugin: string);
 var
   info: TPluginInfo;
@@ -674,12 +729,20 @@ end;
 constructor TPluginManager.Create(ow: TComponent);
 begin
   inherited;
+  FLocalPluginPath := '{app}\Plugins';
   if not assigned(LPluginManager) then
-     LPluginManager := self;
+    LPluginManager := self;
   if not(csDesigning in ComponentState) then
     PluginApplication := self;
   FPlugins := TPluginManagerIntf.Create;
   FAttributeControls := TObjectList<TPluginAttributeControl>.Create;
+end;
+
+function TPluginManager.CreateCommand(ACommand: string; ABody: string): string;
+begin
+  if ABody = '' then
+    ABody := '""';
+  result := '{ "command":"' + ACommand + '", "body":' + ABody + '}';
 end;
 
 destructor TPluginManager.Destroy;
@@ -691,19 +754,31 @@ begin
   inherited;
 end;
 
-procedure TPluginManager.EmbbedControl(AControlID, AControlType: Int64;
+procedure TPluginManager.EmbedControl(AControlID, AControlType: Int64;
 AProc: TProc<IPluginExecute>);
 var
   i: Integer;
   intf: IPluginExecute;
+  AContinue: boolean;
 begin
   if assigned(FAttributeControls) then
     for i := 0 to FAttributeControls.Count - 1 do
       with FAttributeControls.items[i] do
-        if (TypeID = AControlID) and ((SubTypeID = AControlType) or (AControlType=-1)) then
+        if (TypeID = AControlID) and
+          ((SubTypeID = AControlType) or (AControlType = -1)) then
         begin
-          intf := PluginExecute;
-          AProc(intf);
+          AContinue := true;
+          if assigned(FonBeforeExecute) then
+            FonBeforeExecute(FAttributeControls.items[i].PluginExecute,
+              AContinue);
+          if AContinue then
+          begin
+            PluginExecute.Connection(FPlugins.FConnectionString);
+            PluginExecute.User(FPlugins.FFilial, FPlugins.FAppUser);
+            intf := PluginExecute;
+            AProc(intf);
+            intf.Sync(CreateCommand('start', ''));
+          end;
         end;
 end;
 
@@ -713,19 +788,30 @@ begin
     result := FPlugins.Filename;
 end;
 
-procedure TPluginManager.NewEmbbedControl(AParentHandle: THandle;
+procedure TPluginManager.EmbedControl(AParentHandle: THandle;
 AControlID, AControlType: Int64);
 var
   i: Integer;
+  AContinue: boolean;
 begin
   if assigned(FAttributeControls) then
     for i := 0 to FAttributeControls.Count - 1 do
       with FAttributeControls.items[i] do
         if (TypeID = AControlID) and (SubTypeID = AControlType) then
         begin
-          FAttributeControls.items[i].PluginExecute.Embedded(AParentHandle);
+          AContinue := true;
+          if assigned(FonBeforeExecute) then
+            FonBeforeExecute(FAttributeControls.items[i].PluginExecute,
+              AContinue);
+          if AContinue then
+            with FAttributeControls.items[i] do
+            begin
+              PluginExecute.Connection(FPlugins.FConnectionString);
+              PluginExecute.User(FPlugins.FFilial, FPlugins.FAppUser);
+              PluginExecute.Embedded(AParentHandle);
+              PluginExecute.Sync(CreateCommand('start', ''));
+            end;
         end;
-
 end;
 
 procedure TPluginManager.LoadPluginPath(APath: string);
@@ -744,6 +830,21 @@ procedure TPluginManager.Open(AApp: IPluginApplication);
 begin
   if assigned(FPlugins) then
     Plugins.Open(AApp);
+end;
+
+procedure TPluginManager.OpenDialog(AIniFile: string);
+begin
+{$IFNDEF BPL}
+  if AIniFile = '' then
+    AIniFile := Filename;
+  // install news plugins
+  with PluginFormManagerDlg do
+    try
+      Filename := AIniFile;
+      ShowModal;
+    finally
+    end;
+{$ENDIF}
 end;
 
 procedure TPluginManager.Perform(ATypeID: Int64; AMsg: Cardinal;
@@ -768,6 +869,11 @@ begin
   result := FPlugins.InstallPlugin(APlugin);
 end;
 
+procedure TPluginManager.SendCommand(ACommand, ABody: string);
+begin
+  Sync(CreateCommand(ACommand, ABody));
+end;
+
 procedure TPluginManager.SetActive(const Value: boolean);
 begin
   if not(csDesigning in ComponentState) then
@@ -784,7 +890,6 @@ begin
     end;
   end;
   FActive := Value;
-
 end;
 
 procedure TPluginManager.SetFileName(const Value: string);
@@ -893,13 +998,19 @@ begin
   FonRegisterToolbarItem := Value;
 end;
 
-initialization
+procedure TPluginManager.Sync(const AJson: string);
+begin
+  if assigned(FPlugins) then
+    FPlugins.Sync(AJson);
 
+end;
+
+initialization
 
 Finalization
 
 if LPluginMangerLocal then
-   FreeAndNil(LPluginManager);
+  FreeAndNil(LPluginManager);
 PluginApplication := nil;
 
 end.

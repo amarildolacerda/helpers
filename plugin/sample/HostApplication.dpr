@@ -1,6 +1,7 @@
 program HostApplication;
 
 uses
+  ShareMem,
   Vcl.Forms,
   plugin.Manager,
   wMainMenu in 'wMainMenu.pas' {Form11};

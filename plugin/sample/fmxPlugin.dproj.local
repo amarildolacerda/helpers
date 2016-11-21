@@ -2,11 +2,6 @@
 <BorlandProject>
 	<Transactions>
     <Transaction>2016/10/23 20:04:43.000.312,C:\Fontes\plugin\sample\fmxPlugin.dproj=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Project5.dproj</Transaction>
-    <Transaction>2016/10/23 20:05:32.000.789,=C:\Fontes\plugin\sample\Unit3.pas</Transaction>
     <Transaction>2016/10/23 20:05:50.000.281,C:\Fontes\plugin\sample\Unit3.fmx=C:\Fontes\plugin\sample\wFrmFormPlugin.fmx</Transaction>
-    <Transaction>2016/10/23 20:05:50.000.281,C:\Fontes\plugin\sample\Unit3.pas=C:\Fontes\plugin\sample\wFrmFormPlugin.pas</Transaction>
-    <Transaction>2016/10/23 21:23:23.546,=C:\Fontes\plugin\sample\Unit1.pas</Transaction>
-    <Transaction>2016/10/23 21:23:49.591,C:\Fontes\plugin\plugin.InitFmxHack.pas=C:\Fontes\plugin\sample\Unit1.pas</Transaction>
-    <Transaction>2016/10/23 21:35:49.537,C:\Fontes\plugin\plugin.InitFmxHack.pas=</Transaction>
   </Transactions>
 </BorlandProject>

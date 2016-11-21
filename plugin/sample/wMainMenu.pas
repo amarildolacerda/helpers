@@ -47,7 +47,7 @@ procedure TForm11.Button1Click(Sender: TObject);
 begin
  // procura um plugin que se encaixa nos parametros indicados.
  // se estiver usando Um TPageControl, pode por cada plugin em uma aba.
- GetPluginManager.NewEmbbedControl(Panel1.Handle,1,0);
+ GetPluginManager.EmbedControl(Panel1.Handle,1,0);
 end;
 
 procedure TForm11.FormShow(Sender: TObject);
@@ -64,13 +64,15 @@ end;
 
 procedure TForm11.InstallPlugins1Click(Sender: TObject);
 begin
-  // install news plugins
+  GetPluginManager.OpenDialog( GetPluginIni );
+{  // install news plugins
   with PluginFormManagerDlg do
     try
       Filename := GetPluginIni;
       ShowModal;
     finally
     end;
+    }
 end;
 
 procedure TForm11.RegisterAttributeControl(const ATypeID,ASubTypeID: Int64;

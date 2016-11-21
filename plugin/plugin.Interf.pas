@@ -26,7 +26,11 @@ unit Plugin.Interf;
 
 interface
 
-uses  {$ifdef FMX} FMX.Controls {$else}  VCL.Controls {$endif};
+uses {$IFDEF FMX} FMX.Controls {$ELSE} VCL.Controls {$ENDIF};
+
+
+const
+   constPluginInterfaceVersion = 1;
 
 type
 
@@ -47,7 +51,7 @@ type
   }
 
 
-  IPluginExecuteBase=interface;
+  IPluginExecuteBase = interface;
 
   // ---------------------------------------------------------------------------
   // Plugin Controls
@@ -60,7 +64,8 @@ type
     function PluginName: string;
     function GetTypeID: Int64;
     function GetAuthor: string;
-    function GetInterface: IPluginExecuteBase; // retorna a interface que implementa.
+    function GetInterface: IPluginExecuteBase;
+    // retorna a interface que implementa.
   end;
 
   // list of plugins interface in the same DLL
@@ -71,29 +76,37 @@ type
     function Count: integer;
     function GetItem(idx: integer): IPluginInfo;
     procedure Connection(const AConnectionString: string);
-    procedure Add( AInfo:IPluginInfo);
+    procedure Add(AInfo: IPluginInfo);
 
     procedure Install;
     procedure UnInstall;
   end;
 
-
   // ---------------------------------------------------------------------------
   // Interfaces Plugins implments
   // ---------------------------------------------------------------------------
+  IPluginExecuteSync = interface
+    ['{9AD34563-BA02-45C7-B821-5BAD712EF2AD}']
+    procedure Sync(const AJson: string);
+  end;
 
-  IPluginExecuteBase = interface
+  IPluginExecuteConnection = interface(IPluginExecuteSync)
+    ['{C45E1B77-4CAF-462D-A031-26292B7D854A}']
+    procedure Connection(const AConnectionString: string);
+    procedure User(const AFilial: integer; const AAppUser: string);
+  end;
+
+  IPluginExecuteBase = interface(IPluginExecuteConnection)
     ['{4F0858A2-A92A-4705-9E74-5C4BEBB68F02}']
-  //  function GetHandle:THandle;
-  //  procedure SetHandle(AHandle:THandle);
+    // function GetHandle:THandle;
+    // procedure SetHandle(AHandle:THandle);
+    function GetVersion:integer;
     function GetCaption: string;
     function GetTypeID: Int64;
-    procedure SetTypeID(const ATypeID:Int64);
-    procedure Connection(const AConnectionString:string);
-    procedure SetParams( AJsonParams:String );
-    procedure User(const AFilial: integer; const AAppUser: string);
-    procedure Sync(const AJson: string);
-    procedure Perform(AMsg:Cardinal;WParam:NativeUInt;LParam:NativeUInt);
+    procedure SetTypeID(const ATypeID: Int64);
+    procedure SetParams(AJsonParams: String);
+    procedure SetPosition( ATop,ALeft,AWidth,AHeight:Integer);
+    procedure Perform(AMsg: Cardinal; WParam: NativeUInt; LParam: NativeUInt);
     // {"control":xxx,...."operation":"open"}  // TPluginOperation = (open,close,edit,insert,post,delete)
     function CanClose: Boolean;
   end;
@@ -101,8 +114,12 @@ type
   IPluginExecute = interface(IPluginExecuteBase)
     ['{73D9055C-56B3-4ADC-98E6-4F5F0B2D930F}']
     procedure Execute(const AModal: Boolean);
-    procedure Embedded(const AParent: THandle);
+    procedure Embedded(const AParent: THandle);overload;
+    {$ifndef DLL}
+ //       function EmbeddedControl(const FParent:TWinControl):boolean;overload;
+    {$endif}
   end;
+
 
   IPluginControl = interface(IPluginExecute)
     ['{84B1D051-D13D-4D72-BE63-26757FED98AB}']
@@ -115,7 +132,7 @@ type
     procedure DoClick(const AParent: THandle);
     procedure Embedded(const AParent: THandle);
     function CanClose: Boolean;
-    function GetResourceName:String;
+    function GetResourceName: String;
   end;
 
   IPluginToolbarItem = interface(IPluginMenuItem)
@@ -130,7 +147,7 @@ type
       ADoExecute: IPluginMenuItem);
     procedure RegisterToolbarItem(const AParentItemName, ACaption: string;
       ADoExecute: IPluginToolbarItem);
-    procedure RegisterAttributeControl(const AType,ASubType: Int64;
+    procedure RegisterAttributeControl(const AType, ASubType: Int64;
       ADoExecute: IPluginControl);
   end;
 
@@ -139,10 +156,10 @@ var
 
 implementation
 
-
 initialization
 
 finalization
-  PluginApplication := nil;
+
+PluginApplication := nil;
 
 end.

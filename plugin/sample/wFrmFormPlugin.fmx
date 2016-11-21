@@ -2,11 +2,22 @@ object Form3: TForm3
   Left = 0
   Top = 0
   Caption = 'Form3'
-  ClientHeight = 480
-  ClientWidth = 640
+  ClientHeight = 182
+  ClientWidth = 375
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
   OnClose = FormClose
   DesignerMasterStyle = 0
+  object Label1: TLabel
+    Position.X = 24.000000000000000000
+    Position.Y = 32.000000000000000000
+    Size.Width = 329.000000000000000000
+    Size.Height = 113.000000000000000000
+    Size.PlatformDefault = False
+    Text = 
+      'Usar Firemonkey no plugin e consumir em um host VCL n'#227'o esta fun' +
+      'cionando: ver    https://community.embarcadero.com/blogs/entry/w' +
+      'riting-a-firemonkey-dll-for-use-with-a-vcl-application-34 '
+  end
 end

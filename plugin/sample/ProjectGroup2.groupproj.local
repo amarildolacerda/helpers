@@ -2,6 +2,6 @@
 <BorlandProject>
 	<Transactions/>
 	<Default.Personality>
-		<Projects ActiveProject="C:\Fontes\plugin\sample\PluginExecuteSimple.dproj"/>
+		<Projects ActiveProject="C:\Fontes\plugin\sample\HostApplication.dproj"/>
 	</Default.Personality>
 </BorlandProject>

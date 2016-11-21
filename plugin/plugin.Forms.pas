@@ -37,17 +37,19 @@ type
     FSubTypeID: Int64;
     FParams: String;
     FConnectionString: string;
-    FUser, FPass: string;
     FFilial: integer;
     FAppUser: string;
   private
+    FOnNotify: TNotifyEvent;
     procedure SetSubTypeID(const Value: Int64);
+    procedure SetOnNotify(const Value: TNotifyEvent);
   protected
     destructor Destroy; override;
     procedure SetForm(const Value: TForm); virtual;
     function GetForm(AParent: THandle): TForm; virtual;
     function GetCaption: string; virtual;
     function GetSubTypeID: Int64; virtual;
+    procedure DoNotify;
 
     { function GetHandle:THandle;
       procedure SetHandle(AHandle:THandle);
@@ -64,6 +66,11 @@ type
     function GetDescription: string; virtual;
   public
     property SubTypeID: Int64 read GetSubTypeID write SetSubTypeID;
+    property Usuario: string read FAppUser;
+    property Filial: integer read FFilial;
+    property ConnectionString: string read FConnectionString;
+    property Params: string read FParams;
+    property OnNotify: TNotifyEvent read FOnNotify write SetOnNotify;
   end;
 
 {$IFDEF FMX}
@@ -78,20 +85,23 @@ type
     procedure Init; virtual;
   public
     constructor Create(AFormClass: TFormClass; ACaption: String); virtual;
+    destructor Destroy; override;
     function GetCaption: string; override;
 
     procedure Execute(const AModal: boolean); override;
     procedure Embedded(const AParent: THandle); override;
+{$IFNDEF DLL}
+    function EmbeddedControl(const FParent: TWinControl): boolean;
+      overload; override;
+{$ENDIF}
     procedure DoStart; override;
   end;
-
 
 procedure Register;
 
 implementation
 
 uses System.classes.Helper, System.Rtti;
-
 
 procedure Register;
 begin
@@ -103,13 +113,15 @@ begin
   FConnectionString := AConnectionString;
   if not assigned(FForm) then
     exit;
-  if Supports(FForm, IPluginExecuteBase) then
-    (FForm as IPluginExecuteBase).Connection(AConnectionString)
+  if Supports(FForm, IPluginExecuteConnection) then
+    (FForm as IPluginExecuteConnection).Connection(AConnectionString)
   else
   begin
     // DO NOT CHANGE NAMES
     FForm.ContextProperties['ConnectionString'] := AConnectionString;
   end;
+  DoNotify;
+
 end;
 
 destructor TPluginExecuteService.Destroy;
@@ -117,6 +129,12 @@ begin
   if FOwned then
     FreeAndNil(FForm);
   inherited;
+end;
+
+procedure TPluginExecuteService.DoNotify;
+begin
+  if assigned(FOnNotify) then
+    FOnNotify(self);
 end;
 
 procedure TPluginExecuteService.Execute(const AModal: boolean);
@@ -195,9 +213,15 @@ begin
 
 end;
 
+procedure TPluginExecuteService.SetOnNotify(const Value: TNotifyEvent);
+begin
+  FOnNotify := Value;
+end;
+
 procedure TPluginExecuteService.SetParams(AJsonParams: String);
 begin
   FParams := AJsonParams;
+  DoNotify;
 end;
 
 procedure TPluginExecuteService.SetSubTypeID(const Value: Int64);
@@ -214,12 +238,15 @@ procedure TPluginExecuteService.Sync(const AJson: string);
 begin
   if not assigned(FForm) then
     exit;
-  if Supports(FForm, IPluginExecuteBase) then
-    (FForm as IPluginExecuteBase).Sync(AJson)
+  if Supports(FForm, IPluginExecuteSync) then
+    (FForm as IPluginExecuteSync).Sync(AJson)
+  else if Supports(FForm, IPluginExecuteConnection) then
+    (FForm as IPluginExecuteConnection).Sync(AJson)
   else
   begin
     FForm.ContextInvokeMethod('Sync', [AJson]);
   end;
+  DoNotify;
 end;
 
 procedure TPluginExecuteService.User(const AFilial: integer;
@@ -229,13 +256,14 @@ begin
   FAppUser := AAppUser;
   if not assigned(FForm) then
     exit;
-  if Supports(FForm, IPluginExecuteBase) then
-    (FForm as IPluginExecuteBase).User(AFilial, AAppUser)
+  if Supports(FForm, IPluginExecuteConnection) then
+    (FForm as IPluginExecuteConnection).User(AFilial, AAppUser)
   else
   begin
     FForm.ContextProperties['Filial'] := AFilial;
     FForm.ContextProperties['Usuario'] := AAppUser;
   end;
+  DoNotify;
 end;
 
 { TPluginFormService }
@@ -245,6 +273,13 @@ begin
   inherited Create;
   FFormClass := AFormClass;
   FCaption := ACaption;
+end;
+
+destructor TPluginFormService.Destroy;
+begin
+  FCaption := '';
+  FFormClass := nil;
+  inherited;
 end;
 
 procedure TPluginFormService.DoStart;
@@ -257,6 +292,16 @@ begin
   Init;
   inherited;
 end;
+
+{$IFNDEF DLL}
+
+function TPluginFormService.EmbeddedControl(const FParent: TWinControl)
+  : boolean;
+begin
+  Init;
+  result := inherited;
+end;
+{$ENDIF}
 
 procedure TPluginFormService.Execute(const AModal: boolean);
 begin
@@ -275,8 +320,11 @@ end;
 
 procedure TPluginFormService.Init;
 begin
-  FreeAndNil(FForm);
-  SetForm(FFormClass.Create(nil));
+  if not assigned(FForm) then
+  begin
+    // FreeAndNil(FForm);
+    SetForm(FFormClass.Create(TPluginService.OwnedComponents));
+  end;
   FForm.Caption := FCaption;
   FOwned := true;
 

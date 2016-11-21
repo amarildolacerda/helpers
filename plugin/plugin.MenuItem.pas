@@ -28,6 +28,7 @@ type
   public
     constructor Create(AFormClass: TFormClass; AMenuItemName: string;
       ATypeID: Int64; ACaption: String); virtual;
+    destructor destroy;override;
     class function New(AFormClass: TFormClass; AMenuItemName: string;
       ATypeID: Int64; ACaption: String): IPluginMenuItem;
     procedure DoStart; override;
@@ -75,6 +76,12 @@ begin
   FCaption := ACaption;
   FFormClass := AFormClass;
   TypeID := ATypeID;
+end;
+
+destructor TPluginMenuItemService.destroy;
+begin
+
+  inherited;
 end;
 
 procedure TPluginMenuItemService.DoClick(const AParent: THandle);

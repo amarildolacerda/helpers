@@ -34,9 +34,9 @@ object Form11: TForm11
   object Button1: TButton
     Left = 24
     Top = 65
-    Width = 145
+    Width = 209
     Height = 25
-    Caption = 'Load Plugin Control'
+    Caption = 'Load Plugin Control Embedded'
     TabOrder = 2
     OnClick = Button1Click
   end
