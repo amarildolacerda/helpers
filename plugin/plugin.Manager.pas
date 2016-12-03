@@ -125,7 +125,16 @@ type
   TPluginBeforeExecuteEvent = procedure(const AExecute: IPluginExecuteBase;
     var AContinue: boolean) of object;
 
-  TPluginManager = class(TComponent, IPluginApplication)
+  TPluginApplication = class(TInterfacedObject, IPluginApplication)
+    procedure RegisterMenuItem(const AParentMenuItemName, ACaption: string;
+      ADoExecute: IPluginMenuItem);
+    procedure RegisterToolbarItem(const AParentItemName, ACaption: string;
+      ADoExecute: IPluginToolbarItem);
+    procedure RegisterAttributeControl(const AType, ASubType: Int64;
+      ADoExecute: IPluginControl);
+  end;
+
+  TPluginManager = class(TComponent { , IPluginApplication } )
   private
     FonRegisterMenuItem: TPluginApplicationMenuItemEvent;
     FonRegisterToolbarItem: TPluginApplicationToolbarItemEvent;
@@ -216,19 +225,24 @@ type
     property Filename: string read GetFileName write SetFileName;
     property LocalPluginPath: string read FLocalPluginPath
       write SetLocalPluginPath;
-    property Active: boolean read FActive write SetActive;
-    property OnActive: TNotifyEvent read FOnActive write SetOnActive;
     property MainMenu: TMainMenu read FMainMenu write SetMainMenu;
     property MenuItem: TMenuItem read FMenuItem write SetMenuItem;
+    property OnActive: TNotifyEvent read FOnActive write SetOnActive;
+    property Active: boolean read FActive write SetActive;
   end;
 
   // extens TMenuItem to implements anonimous and Interfaced menu item;
+  TRecInterfaced = record
+    Controller: IPluginMenuItem;
+  end;
+
   TPluginMenuItemInterf = class(TMenuItem)
   protected
     FProc: TProc<TObject>;
     procedure DoClick(Sender: TObject);
   public
-    PluginMenuItem: IPluginMenuItem;
+    [unsafe]
+    PluginMenuItem: TRecInterfaced;
     constructor Create(AOwner: TComponent; AProc: TProc<TObject>); overload;
   end;
 
@@ -343,9 +357,9 @@ begin
         begin
           AContinue := true;
           if assigned(FonBeforeExecute) then
-            FonBeforeExecute(PluginMenuItem, AContinue);
+            FonBeforeExecute(PluginMenuItem.Controller, AContinue);
           if AContinue then
-            PluginMenuItem.DoClick(0);
+            PluginMenuItem.Controller.DoClick(0);
         end;
       end);
 
@@ -353,11 +367,11 @@ begin
   it := TPluginMenuItemInterf.Create(AMainMenu, AProc);
   it.Name := 'mnPlugin_' + formatDatetime
     ('hhmmsszzz_' + intToStr(itCount), now);
-  it.PluginMenuItem := ADoExecute;
+  it.PluginMenuItem.Controller := ADoExecute;
 {$IFDEF FMX}
   it.text := (it.PluginMenuItem as IPluginMenuItem).GetCaption;
 {$ELSE}
-  it.Caption := (it.PluginMenuItem as IPluginMenuItem).GetCaption;
+  it.Caption := (it.PluginMenuItem.Controller as IPluginMenuItem).GetCaption;
   itClient.Add(it);
 {$ENDIF}
   // adiciona o menu na lista
@@ -732,8 +746,6 @@ begin
   FLocalPluginPath := '{app}\Plugins';
   if not assigned(LPluginManager) then
     LPluginManager := self;
-  if not(csDesigning in ComponentState) then
-    PluginApplication := self;
   FPlugins := TPluginManagerIntf.Create;
   FAttributeControls := TObjectList<TPluginAttributeControl>.Create;
 end;
@@ -876,20 +888,30 @@ end;
 
 procedure TPluginManager.SetActive(const Value: boolean);
 begin
-  if not(csDesigning in ComponentState) then
-  begin
-    if not assigned(PluginApplication) then
-      raise Exception.Create('Não inicializou o objeto PluginApplication');
-    if Value then
+  TThread.CreateAnonymousThread(
+    procedure
     begin
-      FPlugins.Open(PluginApplication);
-      if FLocalPluginPath <> '' then
-        FPlugins.LoadPluginPath(FLocalPluginPath);
-      if assigned(FOnActive) then
-        FOnActive(self);
-    end;
-  end;
+      TThread.Queue(nil,
+        procedure
+        begin
+          if not(csDesigning in ComponentState) then
+          begin
+            if not assigned(PluginApplication) then
+              raise Exception.Create
+                ('Não inicializou o objeto PluginApplication');
+            if Value then
+            begin
+              FPlugins.Open(PluginApplication);
+              if FLocalPluginPath <> '' then
+                FPlugins.LoadPluginPath(FLocalPluginPath);
+              if assigned(FOnActive) then
+                FOnActive(self);
+            end;
+          end;
+        end);
+    end).start;
   FActive := Value;
+
 end;
 
 procedure TPluginManager.SetFileName(const Value: string);
@@ -1005,7 +1027,29 @@ begin
 
 end;
 
+{ TPluginApplication }
+
+procedure TPluginApplication.RegisterAttributeControl(const AType,
+  ASubType: Int64; ADoExecute: IPluginControl);
+begin
+  GetPluginManager.RegisterAttributeControl(AType, ASubType, ADoExecute);
+end;
+
+procedure TPluginApplication.RegisterMenuItem(const AParentMenuItemName,
+  ACaption: string; ADoExecute: IPluginMenuItem);
+begin
+  GetPluginManager.RegisterMenuItem(AParentMenuItemName, ACaption, ADoExecute);
+end;
+
+procedure TPluginApplication.RegisterToolbarItem(const AParentItemName,
+  ACaption: string; ADoExecute: IPluginToolbarItem);
+begin
+  GetPluginManager.RegisterToolbarItem(AParentItemName, ACaption, ADoExecute);
+end;
+
 initialization
+
+PluginApplication := TPluginApplication.Create() as IPluginApplication;
 
 Finalization
 

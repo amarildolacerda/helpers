@@ -1,7 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<BorlandProject>
-	<Transactions>
-    <Transaction>2016/10/23 20:04:43.000.312,C:\Users\amari\Documents\Embarcadero\Studio\Projects\Project5.dproj=C:\Fontes\plugin\sample\fmxPlugin.dproj</Transaction>
-    <Transaction>2016/10/23 20:05:50.000.281,C:\Fontes\plugin\sample\wFrmFormPlugin.fmx=C:\Fontes\plugin\sample\Unit3.fmx</Transaction>
-  </Transactions>
-</BorlandProject>

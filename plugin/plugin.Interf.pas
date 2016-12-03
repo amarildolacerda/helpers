@@ -152,6 +152,7 @@ type
   end;
 
 var
+
   PluginApplication: IPluginApplication; // both plugin and host can set value
 
 implementation

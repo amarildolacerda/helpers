@@ -21,6 +21,12 @@
         <Projects Include="..\WBAPlugins.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="Plugin_do_fred_f.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="HostAppFred.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -83,14 +89,32 @@
     <Target Name="WBAPlugins:Make">
         <MSBuild Projects="..\WBAPlugins.dproj" Targets="Make"/>
     </Target>
+    <Target Name="Plugin_do_fred_f">
+        <MSBuild Projects="Plugin_do_fred_f.dproj"/>
+    </Target>
+    <Target Name="Plugin_do_fred_f:Clean">
+        <MSBuild Projects="Plugin_do_fred_f.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Plugin_do_fred_f:Make">
+        <MSBuild Projects="Plugin_do_fred_f.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HostAppFred">
+        <MSBuild Projects="HostAppFred.dproj"/>
+    </Target>
+    <Target Name="HostAppFred:Clean">
+        <MSBuild Projects="HostAppFred.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HostAppFred:Make">
+        <MSBuild Projects="HostAppFred.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="HostApplication;PluginMenuItemSimple;PluginExecuteSimple;fmxPlugin;Host_PluginManagerCmp;WBAPlugins"/>
+        <CallTarget Targets="HostApplication;PluginMenuItemSimple;PluginExecuteSimple;fmxPlugin;Host_PluginManagerCmp;WBAPlugins;Plugin_do_fred_f;HostAppFred"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="HostApplication:Clean;PluginMenuItemSimple:Clean;PluginExecuteSimple:Clean;fmxPlugin:Clean;Host_PluginManagerCmp:Clean;WBAPlugins:Clean"/>
+        <CallTarget Targets="HostApplication:Clean;PluginMenuItemSimple:Clean;PluginExecuteSimple:Clean;fmxPlugin:Clean;Host_PluginManagerCmp:Clean;WBAPlugins:Clean;Plugin_do_fred_f:Clean;HostAppFred:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="HostApplication:Make;PluginMenuItemSimple:Make;PluginExecuteSimple:Make;fmxPlugin:Make;Host_PluginManagerCmp:Make;WBAPlugins:Make"/>
+        <CallTarget Targets="HostApplication:Make;PluginMenuItemSimple:Make;PluginExecuteSimple:Make;fmxPlugin:Make;Host_PluginManagerCmp:Make;WBAPlugins:Make;Plugin_do_fred_f:Make;HostAppFred:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

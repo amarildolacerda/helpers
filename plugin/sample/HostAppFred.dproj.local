@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2016/12/02 22:58:33.000.909,=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit25.pas</Transaction>
+    <Transaction>2016/12/02 22:58:53.000.558,C:\Fontes\plugin\sample\HostAppFred.dfm=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit25.dfm</Transaction>
+    <Transaction>2016/12/02 22:58:53.000.558,C:\Fontes\plugin\sample\HostAppFred.pas=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit25.pas</Transaction>
+    <Transaction>2016/12/02 22:59:11.000.945,C:\Fontes\plugin\sample\uHostAppFred.dfm=C:\Fontes\plugin\sample\HostAppFred.dfm</Transaction>
+    <Transaction>2016/12/02 22:59:11.000.945,C:\Fontes\plugin\sample\uHostAppFred.pas=C:\Fontes\plugin\sample\HostAppFred.pas</Transaction>
+    <Transaction>2016/12/02 22:59:28.000.921,C:\Fontes\plugin\sample\HostAppFred.dproj=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Project11.dproj</Transaction>
+  </Transactions>
+</BorlandProject>

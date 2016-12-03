@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+  <Transactions>
+    <Transaction>2016/12/02 22:15:52.839,=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit24.pas</Transaction>
+    <Transaction>2016/12/02 22:17:07.380,C:\Fontes\plugin\sample\ProjetoConsomeAcessoFiredac.dproj=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Project11.dproj</Transaction>
+    <Transaction>2016/12/02 22:17:35.876,C:\Fontes\plugin\sample\uConsomeAcessoFiredac.dfm=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit24.dfm</Transaction>
+    <Transaction>2016/12/02 22:17:35.876,C:\Fontes\plugin\sample\uConsomeAcessoFiredac.pas=C:\Users\amari\Documents\Embarcadero\Studio\Projects\Unit24.pas</Transaction>
+  </Transactions>
+</BorlandProject>
