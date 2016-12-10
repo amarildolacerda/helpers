@@ -69,7 +69,7 @@ type
   end;
 
   // list of plugins interface in the same DLL
-  // a DLL can implement a lot  IPluginInfo (interfaces)
+  // a DLL can implement a lot of IPluginInfo (interfaces)
   // return by DLL function LoadPlugin
   IPluginItems = interface
     ['{756E63BE-4C02-46AF-85AD-87BDB657201F}']
@@ -98,8 +98,6 @@ type
 
   IPluginExecuteBase = interface(IPluginExecuteConnection)
     ['{4F0858A2-A92A-4705-9E74-5C4BEBB68F02}']
-    // function GetHandle:THandle;
-    // procedure SetHandle(AHandle:THandle);
     function GetVersion:integer;
     function GetCaption: string;
     function GetTypeID: Int64;
@@ -107,7 +105,6 @@ type
     procedure SetParams(AJsonParams: String);
     procedure SetPosition( ATop,ALeft,AWidth,AHeight:Integer);
     procedure Perform(AMsg: Cardinal; WParam: NativeUInt; LParam: NativeUInt);
-    // {"control":xxx,...."operation":"open"}  // TPluginOperation = (open,close,edit,insert,post,delete)
     function CanClose: Boolean;
   end;
 
@@ -115,9 +112,6 @@ type
     ['{73D9055C-56B3-4ADC-98E6-4F5F0B2D930F}']
     procedure Execute(const AModal: Boolean);
     procedure Embedded(const AParent: THandle);overload;
-    {$ifndef DLL}
- //       function EmbeddedControl(const FParent:TWinControl):boolean;overload;
-    {$endif}
   end;
 
 

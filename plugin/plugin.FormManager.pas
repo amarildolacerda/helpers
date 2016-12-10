@@ -96,7 +96,7 @@ begin
     dlg.Filter := ' DLL de Plugin (*.dll)|*.dll';
     if dlg.execute then
     begin
-      if GetPluginManager.InstallPlugin(dlg.Filename) >= 0 then
+      //if GetPluginManager.InstallPlugin(dlg.Filename) >= 0 then
       begin
         CarregarLista;
       end;

@@ -344,8 +344,14 @@ begin
   // procura o menu para mostrar
   itClient := AMainMenu.FindItem(APath);
 {$ENDIF}
+  //ADefaultMenu.
+
   if itClient = nil then
+  begin
     itClient := ADefaultMenu; // se nao encontrou pega um padrao
+    if itClient.caption='-' then
+       itClient := ADefaultMenu.Parent;
+  end;
 
   if not assigned(AProc) then
     AProc := (
@@ -507,7 +513,7 @@ begin
       else
         raise Exception.Create('Não carregou o plugin');
     except
-      // FreeLibrary(H);[
+      FreeLibrary(H);
       raise;
     end;
   end;
