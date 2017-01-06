@@ -137,6 +137,7 @@ type
     procedure SetCanCancel(const Value: Boolean);
     function GetCanCancel: Boolean;
     procedure CheckMax(AInc: Integer);
+    procedure Run(proc: TProc);
   public
     { Public declarations }
     procedure Execute(const ACaption: String; AIdentProcess: Integer = 0);
@@ -167,7 +168,7 @@ implementation
 
 {$R *.dfm}
 
-uses System.LogEvents;
+uses {$IF CompilerVersion>28} System.Threading, {$ENDIF} System.LogEvents;
 
 procedure TProgressEvents.Add(AIndex: Integer; AMsg: string;
   proc: TProc<Integer>);
@@ -186,14 +187,13 @@ begin
     end
     else
     begin
-      DoProgressEvent(self, etWaiting, AMsg, 0);
-      TThread.CreateAnonymousThread(
+      Run(
         procedure
         begin
           DoProgressEvent(self, etStarting, AMsg, 0);
           proc(AIndex);
           DoProgressEvent(self, etFinished, AMsg, 0);
-        end).start;
+        end);
     end;
   finally
     Unlock;
@@ -217,12 +217,12 @@ begin
       DoProgressEvent(self, etFinished, AMsg, 0);
     end
     else
-      TThread.CreateAnonymousThread(
+      Run(
         procedure
         begin
           proc(AValue);
           DoProgressEvent(self, etFinished, AMsg, 0);
-        end).start;
+        end);
   finally
     Unlock;
   end;
@@ -245,12 +245,12 @@ begin
       DoProgressEvent(self, etFinished, AMsg, 0);
     end
     else
-      TThread.CreateAnonymousThread(
+      Run(
         procedure
         begin
           proc(sender);
           DoProgressEvent(self, etFinished, AMsg, 0);
-        end).start;
+        end);
   finally
     Unlock;
   end;
@@ -317,6 +317,23 @@ begin
   LogEvents.DoProgress(sender, identific, ATipo, msg, APosition, nInteracoes);
 end;
 
+procedure TProgressEvents.Run(proc: TProc);
+begin
+{$IF CompilerVersion>28}
+  TTask.create(
+    procedure
+    begin
+      proc;
+    end).start;
+{$ELSE}
+  TThread.CreateAnonymousThread(
+    procedure
+    begin
+      proc;
+    end).start;
+{$ENDIF}
+end;
+
 procedure TProgressEvents.DoProgressEvent(sender: TObject; ATipo: TLogEventType;
 msg: string; APosition: double);
 begin
@@ -325,7 +342,7 @@ begin
     SpeedButton1.tag := ord(FCanCancel);
     Execute('');
   end;
-  TThread.CreateAnonymousThread(
+  Run(
     procedure
     begin
       if TThread.CurrentThread.CheckTerminated then
@@ -359,8 +376,10 @@ begin
                 ValueListEditor1.FindRow(msg, i);
                 if i < 0 then
                 begin
-                  if ATipo = etFinished then
-                    exit; // foi retirado da lista... (item velhoo)...
+                  if not(ATipo in [etCreating, etWaiting]) then
+                    exit;
+                  //if ATipo = etFinished then
+                  //  exit; // foi retirado da lista... (item velhoo)...
 
                   CheckMax(1);
                   i := ValueListEditor1.InsertRow(msg, '...', true);
@@ -396,7 +415,7 @@ begin
           except
           end;
         end);
-    end).start;
+    end);
 
 end;
 
@@ -501,7 +520,7 @@ begin
   UpdatePosition;
   if FAutoDeleteFinished = false then
     exit;
-  TThread.CreateAnonymousThread(
+  Run(
     procedure
     begin
       TThread.Queue(nil,
@@ -516,7 +535,7 @@ begin
             try
               // apaga os concluidos mais velhos para liberar recursos
               n := 0;
-              for i := ValueListEditor1.RowCount - 1 downto 2 do
+              for i := ValueListEditor1.RowCount - 1 downto 0 do
               begin
                 if Terminated then
                   exit;
@@ -541,7 +560,7 @@ begin
           except
           end;
         end);
-    end).start;
+    end);
 end;
 
 procedure TProgressEvents.lblErroClick(sender: TObject);
@@ -584,7 +603,7 @@ end;
 
 procedure TProgressEvents.SetMax(const Value: Integer);
 begin
-  TThread.synchronize(nil,
+  TThread.Queue(nil,
     procedure
     begin
       lock;
@@ -614,7 +633,7 @@ end;
 
 procedure TProgressEvents.SetText(const Value: string);
 begin
-  TThread.synchronize(nil,
+  TThread.Queue(nil,
     procedure
     begin
       lock;
@@ -651,10 +670,10 @@ end;
 procedure TProgressEvents.UpdatePosition;
 
 begin
-  TThread.CreateAnonymousThread(
+  Run(
     procedure
     begin
-      TThread.synchronize(nil,
+      TThread.Queue(nil,
         procedure
         var
           t: Integer;
@@ -683,7 +702,7 @@ begin
           except
           end;
         end);
-    end).start;
+    end);
 end;
 
 procedure TProgressEvents.WaitFor(const ASleep: Integer);
@@ -701,17 +720,21 @@ begin
 end;
 
 procedure TProgressEvents.WaitForAll(const ASleep: Integer);
+var
+  tick: int64;
 begin
- try
-  while Count > 0 do
-  begin
-    TThread.sleep(ASleep);
-    Application.ProcessMessages;
-    if Terminated then
-      break;
+  try
+    tick := TThread.GetTickCount;
+    while Count > 0 do
+    begin
+      Application.ProcessMessages;
+      if Terminated then
+        break;
+      if (TThread.GetTickCount - tick) > ASleep then
+        break;
+    end;
+  except
   end;
- except
- end;
 end;
 
 end.
