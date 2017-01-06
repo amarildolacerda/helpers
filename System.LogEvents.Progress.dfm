@@ -3,8 +3,8 @@ object ProgressEvents: TProgressEvents
   Top = 0
   BorderIcons = [biMinimize, biMaximize]
   Caption = 'Executando......'
-  ClientHeight = 264
-  ClientWidth = 393
+  ClientHeight = 491
+  ClientWidth = 429
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -22,7 +22,7 @@ object ProgressEvents: TProgressEvents
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 387
+    Width = 423
     Height = 41
     Align = alTop
     Alignment = taLeftJustify
@@ -37,24 +37,27 @@ object ProgressEvents: TProgressEvents
     ParentBackground = False
     ParentFont = False
     TabOrder = 0
+    ExplicitWidth = 387
   end
   object Panel2: TPanel
     Left = 0
-    Top = 218
-    Width = 393
+    Top = 445
+    Width = 429
     Height = 46
     Align = alBottom
     BevelOuter = bvNone
     Color = clBtnHighlight
     ParentBackground = False
     TabOrder = 1
+    ExplicitTop = 218
+    ExplicitWidth = 393
     DesignSize = (
-      393
+      429
       46)
     object Bevel1: TBevel
       Left = 0
       Top = 0
-      Width = 393
+      Width = 429
       Height = 50
       Align = alTop
       ExplicitLeft = 392
@@ -62,13 +65,14 @@ object ProgressEvents: TProgressEvents
       ExplicitWidth = 50
     end
     object SpeedButton1: TSpeedButton
-      Left = 279
+      Left = 315
       Top = 4
       Width = 108
       Height = 37
       Anchors = [akTop, akRight]
       Caption = 'OK'
       OnClick = SpeedButton1Click
+      ExplicitLeft = 279
     end
     object lbPosition: TLabel
       Left = 20
@@ -79,12 +83,13 @@ object ProgressEvents: TProgressEvents
     object lblErro: TLabel
       Left = 115
       Top = 6
-      Width = 158
+      Width = 194
       Height = 33
       Anchors = [akLeft, akTop, akRight]
       AutoSize = False
       WordWrap = True
       OnClick = lblErroClick
+      ExplicitWidth = 158
     end
     object lbTimer: TLabel
       Left = 20
@@ -105,8 +110,8 @@ object ProgressEvents: TProgressEvents
   object ValueListEditor1: TValueListEditor
     Left = 0
     Top = 47
-    Width = 393
-    Height = 171
+    Width = 429
+    Height = 398
     Align = alClient
     BorderStyle = bsNone
     Color = clHighlightText
@@ -120,9 +125,11 @@ object ProgressEvents: TProgressEvents
     TitleCaptions.Strings = (
       'Atividade'
       'Fase')
+    ExplicitWidth = 393
+    ExplicitHeight = 171
     ColWidths = (
       300
-      91)
+      127)
     RowHeights = (
       18
       18)

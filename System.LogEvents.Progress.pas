@@ -66,11 +66,13 @@ type
     function GetMaxThreads: Integer;
     procedure SetMax(const Value: Integer);
     function GetMax: Integer;
-    property Max: Integer read GetMax write SetMax;
-    property MaxThreads: Integer read GetMaxThreads write SetMaxThreads;
     procedure Execute(const ACaption: String; AIdentProcess: Integer = 0);
     procedure WaitFor(const ASleep: Integer = 100);
     procedure WaitForAll(const ASleep: Integer = 100);
+    procedure SetTimeout(const Value: Integer);
+    procedure SetMaxFinished(const Value: Integer);
+    function GetMaxFinished: Integer;
+    function GetTimeout: Integer;
     function Count: Integer;
     procedure Add(sender: TObject; AMsg: string; proc: TProc<TObject>);
       overload;
@@ -78,8 +80,6 @@ type
       overload;
     procedure Add(AValue: string; AMsg: string; proc: TProc<string>); overload;
     procedure Add(AMsg: string; proc: TProc); overload;
-    property Text: string read GetText write SetText;
-    property CanCancel: Boolean read GetCanCancel write SetCanCancel;
     function Terminated: Boolean;
     procedure DoProgress(sender: TObject; identific: Integer;
       ATipo: TLogEventType; msg: string; APosition: double = 0;
@@ -89,6 +89,12 @@ type
     procedure Restart;
     procedure Close;
     procedure Clear;
+    property Text: string read GetText write SetText;
+    property CanCancel: Boolean read GetCanCancel write SetCanCancel;
+    property Max: Integer read GetMax write SetMax;
+    property MaxThreads: Integer read GetMaxThreads write SetMaxThreads;
+    property Timeout: Integer read GetTimeout write SetTimeout;
+    property MaxFinished: Integer read GetMaxFinished write SetMaxFinished;
   end;
 
   TProgressEvents = class(TForm, IProgressEvents)
@@ -117,6 +123,8 @@ type
     FPosition: Integer;
     FMaxThreads: Integer;
     FCanCancel: Boolean;
+    FTimeout: Integer;
+    FMaxFinished: Integer;
     { Private declarations }
     procedure SetTerminated(const Value: Boolean);
     procedure DoProgressEvent(sender: TObject; ATipo: TLogEventType;
@@ -138,11 +146,17 @@ type
     function GetCanCancel: Boolean;
     procedure CheckMax(AInc: Integer);
     procedure Run(proc: TProc);
+    procedure SetTimeout(const Value: Integer);
+    procedure SetMaxFinished(const Value: Integer);
+    function GetMaxFinished: Integer;
+    function GetTimeout: Integer;
   public
     { Public declarations }
     procedure Execute(const ACaption: String; AIdentProcess: Integer = 0);
     property Max: Integer read GetMax write SetMax;
     property MaxThreads: Integer read GetMaxThreads write SetMaxThreads;
+    property Timeout: Integer read GetTimeout write SetTimeout;
+    property MaxFinished: Integer read GetMaxFinished write SetMaxFinished;
     class function new: IProgressEvents; static;
     procedure DoProgress(sender: TObject; identific: Integer;
       ATipo: TLogEventType; msg: string; APosition: double = 0;
@@ -274,8 +288,8 @@ end;
 
 procedure TProgressEvents.CheckThreads;
 begin
-  if Count > FMaxThreads then
-    WaitFor(100);
+  if Count >= FMaxThreads then
+    WaitFor(FTimeout);
 
 end;
 
@@ -296,7 +310,7 @@ end;
 
 procedure TProgressEvents.DoAllFinished(sender: TObject);
 begin
-  WaitForAll(100);
+  WaitForAll(FTimeout);
   try
     DoProgress(sender, 0, etAllFinished, '');
     SetTerminated(true);
@@ -365,8 +379,9 @@ begin
               begin
                 SpeedButton1.Enabled := true;
                 SpeedButton1.tag := 0;
-                WaitForAll(100);
+                WaitForAll(FTimeout);
                 SpeedButton1.caption := 'OK';
+                FMaxFinished := 0;
                 UpdatePosition;
               end
               else
@@ -378,8 +393,8 @@ begin
                 begin
                   if not(ATipo in [etCreating, etWaiting]) then
                     exit;
-                  //if ATipo = etFinished then
-                  //  exit; // foi retirado da lista... (item velhoo)...
+                  // if ATipo = etFinished then
+                  // exit; // foi retirado da lista... (item velhoo)...
 
                   CheckMax(1);
                   i := ValueListEditor1.InsertRow(msg, '...', true);
@@ -456,7 +471,7 @@ procedure TProgressEvents.FormClose(sender: TObject; var Action: TCloseAction);
 begin
 
   SetTerminated(true);
-  WaitFor(1000);
+  WaitFor(FTimeout);
   Action := TCloseAction.caFree;
 end;
 
@@ -469,6 +484,8 @@ end;
 
 procedure TProgressEvents.FormCreate(sender: TObject);
 begin
+  FMaxFinished := 5;
+  FTimeout := 100;
   FStopwatch := TStopwatch.StartNew;
   FAutoDeleteFinished := true;
   FMaxThreads := TThread.ProcessorCount * 2;
@@ -499,6 +516,11 @@ begin
   result := FMax;
 end;
 
+function TProgressEvents.GetMaxFinished: Integer;
+begin
+  result := FMaxFinished;
+end;
+
 function TProgressEvents.GetMaxThreads: Integer;
 begin
   result := FMaxThreads;
@@ -512,6 +534,11 @@ begin
   finally
     Unlock;
   end;
+end;
+
+function TProgressEvents.GetTimeout: Integer;
+begin
+  result := FTimeout;
 end;
 
 procedure TProgressEvents.incPos(x: Integer);
@@ -546,7 +573,7 @@ begin
                     ] = ValueListEditor1.Values[ValueListEditor1.Keys[i]]) then
                   begin
                     inc(n);
-                    if n > 5 then
+                    if n > FMaxFinished then
                     begin
                       ValueListEditor1.DeleteRow(i);
                     end;
@@ -616,6 +643,11 @@ begin
     end);
 end;
 
+procedure TProgressEvents.SetMaxFinished(const Value: Integer);
+begin
+  FMaxFinished := Value;
+end;
+
 procedure TProgressEvents.SetMaxThreads(const Value: Integer);
 begin
   FMaxThreads := Value;
@@ -645,9 +677,15 @@ begin
     end);
 end;
 
+procedure TProgressEvents.SetTimeout(const Value: Integer);
+begin
+  FTimeout := Value;
+end;
+
 procedure TProgressEvents.SpeedButton1Click(sender: TObject);
 begin
   SetTerminated(true);
+  WaitForAll(FTimeout);
   Close;
 end;
 
@@ -708,13 +746,14 @@ end;
 procedure TProgressEvents.WaitFor(const ASleep: Integer);
 begin
   try
-    while Count > FMaxThreads do
-    begin
-      TThread.sleep(ASleep);
-      Application.ProcessMessages;
-      if Terminated then
-        break;
-    end;
+    if FMaxThreads > 0 then
+      while Count >= FMaxThreads do
+      begin
+        TThread.sleep(ASleep);
+        Application.ProcessMessages;
+        if Terminated then
+          break;
+      end;
   except
   end;
 end;
